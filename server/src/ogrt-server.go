@@ -96,6 +96,8 @@ func main() {
 				output_.Writer = new(output.JsonElasticSearchOutput)
 			case "JsonFile":
 				output_.Writer = new(output.JsonFileOutput)
+			case "Null":
+				output_.Writer = new(output.NullOutput)
 			default:
 				log.Fatal("Unkown output type: ", out.Type)
 			}
@@ -118,6 +120,7 @@ func main() {
 		log.Printf("Caught signal %s: shutting down.\n", sig)
 		listener.Close()
 		for _, out := range config.Outputs {
+			log.Println(out.Writer)
 			out.Writer.Close()
 		}
 		os.Exit(0)
