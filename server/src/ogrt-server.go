@@ -16,6 +16,7 @@ import (
 	"os/signal"
 	"output"
 	"protocol"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -49,13 +50,20 @@ type Configuration struct {
 	InfluxMetrics    InfluxMetrics
 }
 
+var exitChannel chan bool
+
 var outputs map[string][]Output
 var output_channels map[string]chan interface{}
+var outstandingOutput sync.WaitGroup
+var output_wait sync.WaitGroup
+var shutdown = false
 
 func main() {
 	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
 
 	log.Printf("ogrt-server %s", VERSION)
+
+	exitChannel = make(chan bool)
 
 	if _, err := toml.DecodeFile("ogrt.conf", &config); err != nil {
 		log.Fatal(err)
@@ -87,7 +95,7 @@ func main() {
 	/* instantiate all outputs */
 	for name, out := range config.Outputs {
 		output_channels[name] = make(chan interface{})
-		for i := 0; i < config.Outputs[name].Workers; i++ {
+		for worker_id := 0; worker_id < config.Outputs[name].Workers; worker_id++ {
 			var output_ Output
 			switch out.Type {
 			case "JsonOverTcp":
@@ -104,8 +112,7 @@ func main() {
 			output_.Writer.Open(out.Params)
 
 			outputs[name] = append(outputs[name], output_)
-			go writeToOutput(name, i, output_channels[name])
-			defer output_.Writer.Close()
+			go writeToOutput(name, worker_id, &output_, output_channels[name])
 		}
 
 		metrics.Register("output_"+name, metrics.NewTimer())
@@ -118,12 +125,15 @@ func main() {
 	go func(c chan os.Signal) {
 		sig := <-c
 		log.Printf("Caught signal %s: shutting down.\n", sig)
+		shutdown = true
 		listener.Close()
-		for _, out := range config.Outputs {
-			log.Println(out.Writer)
-			out.Writer.Close()
+		log.Println("Waiting for outstanding output...")
+		outstandingOutput.Wait()
+		for _, c := range output_channels {
+			close(c)
 		}
-		os.Exit(0)
+		output_wait.Wait()
+		exitChannel <- true
 	}(sigc)
 
 	/* register timer for receive() */
@@ -155,10 +165,13 @@ func main() {
 		n, addr, err := listener.ReadFromUDP(packet_buffer)
 		log.Printf("read %d bytes from %s", n, addr)
 		if err == io.EOF {
-			return
+			continue
 		} else if err != nil {
+			if shutdown == true {
+				break
+			}
 			log.Printf("error while receiving from %s, bytes: %d, error: %s", addr, n, err)
-			return
+			continue
 		}
 
 		receive_timer.Time(func() {
@@ -183,26 +196,36 @@ func main() {
 					}
 
 					for _, c := range output_channels {
+						outstandingOutput.Add(1)
 						c <- msg
 					}
 				}
 			}()
 		})
 	}
+
+	<-exitChannel
+	log.Println("Thank you for using OGRT.")
 }
 
-func writeToOutput(output string, id int, messages chan interface{}) {
-	out := outputs[output][id]
+func writeToOutput(name string, id int, output *Output, messages chan interface{}) {
+	output_wait.Add(1)
 	for message := range messages {
 		switch message := message.(type) {
 		default:
 			log.Printf("unexpected type %T", message)
+			outstandingOutput.Done()
 		case *OGRT.ProcessInfo:
-			metric := metrics.Get("output_" + output).(metrics.Timer)
+			metric := metrics.Get("output_" + name).(metrics.Timer)
 			log.Printf("%d: Persisting JobId=%s,pid=%d,bin=%s", id, message.GetJobId(), message.GetPid(), message.GetBinpath())
-			metric.Time(func() { out.Writer.PersistProcessInfo(message) })
+			metric.Time(func() {
+				output.Writer.PersistProcessInfo(message)
+			})
 			log.Printf("%d: Persisting JobId=%s,pid=%d,bin=%s - Done", id, message.GetJobId(), message.GetPid(), message.GetBinpath())
+			outstandingOutput.Done()
 		}
 	}
-	log.Printf("done")
+	output.Writer.Close()
+	log.Printf("output %s [%d]: closed output.", name, id)
+	output_wait.Done()
 }
