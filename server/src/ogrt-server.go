@@ -46,6 +46,7 @@ type Configuration struct {
 	MaxReceiveBuffer uint32
 	DebugEndpoint    bool
 	PrintMetrics     uint32
+	WebAPI           bool
 	Outputs          map[string]Output
 	InfluxMetrics    InfluxMetrics
 }
@@ -76,6 +77,9 @@ func main() {
 		log.Printf("Instantiated DebugEndpoint at Port 8080 (http://0.0.0.0:8080/debug/metrics)")
 	}
 
+	if config.WebAPI == true {
+		go StartWebAPI()
+	}
 	// Listen for incoming connections.
 	listen_string := fmt.Sprintf("%s:%d", config.Address, config.Port)
 	ServerAddr, err := net.ResolveUDPAddr("udp", listen_string)
