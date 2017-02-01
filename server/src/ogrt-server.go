@@ -106,7 +106,11 @@ func main() {
 			case "JsonOverTcp":
 				output_.Writer = new(output.JsonOverTcpOutput)
 			case "JsonElasticSearch":
-				output_.Writer = new(output.JsonElasticSearchOutput)
+				fallthrough
+			case "JsonElasticSearch3":
+				output_.Writer = new(output.JsonElasticSearch3Output)
+			case "JsonElasticSearch5":
+				output_.Writer = new(output.JsonElasticSearch5Output)
 			case "JsonFile":
 				output_.Writer = new(output.JsonFileOutput)
 			case "Null":

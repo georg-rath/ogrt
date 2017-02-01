@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 export GOPATH=$(pwd):$GOPATH
-go run src/ogrt-server.go
+go run src/ogrt-server.go src/web.go
 

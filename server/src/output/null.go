@@ -3,7 +3,6 @@ package output
 import (
 	"log"
 	"protocol"
-	"time"
 )
 
 type NullOutput struct {
@@ -21,7 +20,6 @@ func (fw *NullOutput) PersistJobEnd(job_end *OGRT.JobEnd) {
 }
 
 func (fw *NullOutput) PersistProcessInfo(process_info *OGRT.ProcessInfo) {
-	time.Sleep(time.Second * 3)
 	log.Println("null: persist process info")
 }
 

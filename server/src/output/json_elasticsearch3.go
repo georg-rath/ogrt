@@ -8,13 +8,13 @@ import (
 	"gopkg.in/olivere/elastic.v3"
 )
 
-type JsonElasticSearchOutput struct {
+type JsonElasticSearch3Output struct {
 	OGWriter
 	client *elastic.Client
 	index  string
 }
 
-func (fw *JsonElasticSearchOutput) Open(params string) {
+func (fw *JsonElasticSearch3Output) Open(params string) {
 	param_split := strings.Split(params, ":")
 	if len(param_split) != 4 {
 		panic("Wrong parameter specification for JsonOverElasticSearch - did you supply it in the format \"protocol:host:port:index\"?")
@@ -28,18 +28,18 @@ func (fw *JsonElasticSearchOutput) Open(params string) {
 
 	client, err := elastic.NewClient(elastic.SetURL(protocol+"://"+host+":"+port), elastic.SetSniff(false))
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(err, ". Did you use the right version of ElasticSearch? I am expecting version 3.")
 	}
 	fw.client = client
 }
 
-func (fw *JsonElasticSearchOutput) PersistJobStart(job_start *OGRT.JobStart) {
+func (fw *JsonElasticSearch3Output) PersistJobStart(job_start *OGRT.JobStart) {
 }
 
-func (fw *JsonElasticSearchOutput) PersistJobEnd(job_end *OGRT.JobEnd) {
+func (fw *JsonElasticSearch3Output) PersistJobEnd(job_end *OGRT.JobEnd) {
 }
 
-func (fw *JsonElasticSearchOutput) PersistProcessInfo(process_info *OGRT.ProcessInfo) {
+func (fw *JsonElasticSearch3Output) PersistProcessInfo(process_info *OGRT.ProcessInfo) {
 	// set time to milliseconds
 	*process_info.Time = *process_info.Time * int64(1000)
 	_, err := fw.client.Index().Index(fw.index).Type("process").BodyJson(process_info).Do()
@@ -48,5 +48,5 @@ func (fw *JsonElasticSearchOutput) PersistProcessInfo(process_info *OGRT.Process
 	}
 }
 
-func (fw *JsonElasticSearchOutput) Close() {
+func (fw *JsonElasticSearch3Output) Close() {
 }
