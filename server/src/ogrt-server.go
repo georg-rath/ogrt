@@ -80,6 +80,7 @@ func main() {
 	if config.WebAPI == true {
 		go StartWebAPI()
 	}
+
 	// Listen for incoming connections.
 	listen_string := fmt.Sprintf("%s:%d", config.Address, config.Port)
 	ServerAddr, err := net.ResolveUDPAddr("udp", listen_string)
@@ -142,7 +143,7 @@ func main() {
 
 	/* register timer for receive() */
 	receive_timer := metrics.NewTimer()
-	metrics.Register("receive", receive_timer)
+	metrics.Register("input_receive", receive_timer)
 
 	/* output metrics on stderr */
 	if config.PrintMetrics > 0 {
@@ -167,7 +168,6 @@ func main() {
 	for {
 		// Read header from the connection
 		n, addr, err := listener.ReadFromUDP(packet_buffer)
-		log.Printf("read %d bytes from %s", n, addr)
 		if err == io.EOF {
 			continue
 		} else if err != nil {
@@ -182,8 +182,6 @@ func main() {
 			// Decode type and length of packet from header
 			msg_type := int32(binary.BigEndian.Uint32(packet_buffer[0:4]))
 			msg_length := binary.BigEndian.Uint32(packet_buffer[4:8])
-
-			log.Printf("type: %d, length: %d", msg_type, msg_length)
 
 			// allocate a buffer as big as the payload and read the rest of the packet
 			data := packet_buffer[8 : msg_length+8]
