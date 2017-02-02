@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+	<title>OGRT Web Dashboard</title>
+	<meta name="description" content="OGRT Web Dashboard">
+  <script language="javascript" type="text/javascript" src="js/elasticsearch.js"></script>
+
+  <script type="text/javascript">
+  var client = new elasticsearch.Client({
+    host: 'localhost:9200',
+    log: 'info'
+  });
+
+  function checkStatus() {
+    client.ping({
+      requestTimeout: 2000,
+    }, function (error) {
+      if (error) {
+        document.getElementById('indicator').innerHTML = "offline";
+        document.getElementById('indicator').style.color = "red";
+      } else {
+        document.getElementById('indicator').innerHTML = "online";
+        document.getElementById('indicator').style.color = "green";
+      }
+    });
+  }
+
+  function initPage() {
+    checkStatus();
+    //setInterval(checkStatus, 3000);
+  }
+
+  function jobsContainingSignature(signature) {
+    return client.search(
+    {
+      index: 'ogrt',
+      body:
+      {
+        "size": 0,
+         "query": {
+            "nested": {
+               "path": "shared_objects",
+               "query": {
+                  "match": {
+                     "shared_objects.signature": signature
+                  }
+               }
+            }
+         },
+         "aggs": {
+          "job_ids": {
+            "terms": {
+              "field": "job_id",
+              "size": "100",
+              "order": {
+                "_term" : "asc"
+              }
+            }
+          }
+        }
+      }
+      }).then(function (body) {
+        return body.aggregations.job_ids.buckets;
+      }, function (error) {
+        console.error(error.message);
+      });;
+  }
+
+  function displayDetails(exec) {
+    document.getElementById('job_id').innerHTML = exec.job_id
+    document.getElementById('hostname').innerHTML = exec.hostname
+    document.getElementById('cmdline').innerHTML = exec.cmdline
+    document.getElementById('binpath').innerHTML = exec.binpath
+    document.getElementById('signature').innerHTML = exec.signature
+    document.getElementById('username').innerHTML = exec.username
+    document.getElementById('time').innerHTML = Date(exec.time)
+    document.getElementById('pid').innerHTML = exec.pid
+  }
+
+  function searchForSignature(){
+    var signature = document.getElementById('i_signature').value;
+    var affected = document.getElementById('affected');
+    var sep = "";
+    affected.innerHTML="";
+
+    jobsContainingSignature(signature).then(function(result) {
+      result.forEach(function(element) {
+        console.log(element.key);
+        affected.innerHTML += `${sep}${element.key}`
+        if(sep == "") { sep = ", "; }
+      });
+    });
+  }
+  window.onload = initPage
+  </script>
+	<link href="css/minimal.css" rel="stylesheet">
+</head>
+
+<body>
+<div class="container">
+	<header>
+		<a class="logo">OGRT Web Dashboard</a>
+	</header>
+
+  <div class="row">
+		<div id="inputs" class="col-12">
+			<h1>ElasticSearch<span id="indicator" style="font-size:12px" class="float-right">&nbsp;</span></h1>
+			<hr>
+			<p>Run your queries here.</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-6">
+      <h1>Lookup</h1>
+      <hr>
+      <form onSubmit="event.preventDefault(); searchForSignature()">
+        <label for="i_signature">Signature</label>
+        <input size="42" type="text" name="Signature" id="i_signature" value="">
+        <input type="submit" value="Search">
+      </form>
+    </div>
+    <div class="col-6">
+      <h1>Details</h1>
+      <table>
+        <tr>
+          <th>Job ID</td>
+          <td id="job_id"></td>
+        </tr>
+        <tr>
+          <th>Hostname</td>
+          <td id="hostname"></td>
+        </tr>
+        <tr>
+          <th>Command</td>
+          <td id="cmdline"></td>
+        </tr>
+        <tr>
+          <th>Binary Path</td>
+          <td id="binpath"></td>
+        </tr>
+        <tr>
+          <th>Signature</td>
+          <td id="signature"></td>
+        </tr>
+        <tr>
+          <th>User</td>
+          <td id="username"></td>
+        </tr>
+        <tr>
+          <th>Time</td>
+          <td id="time"></td>
+        </tr>
+        <tr>
+          <th>PID</td>
+          <td id="pid"></td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-6">
+      <h1>Affected Jobs</h1>
+      <p id="affected">
+      </p>
+    </div>
+  </div>
+</div>
+</body>
+</html>
