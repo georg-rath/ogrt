@@ -6,6 +6,7 @@ import "time"
 import "strings"
 
 func StartWebAPI() {
+	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
 	r.GET("/metrics", func(c *gin.Context) {
 		outputs := outputMetrics(metrics.DefaultRegistry, time.Millisecond)
