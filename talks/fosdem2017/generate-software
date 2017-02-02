@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+
+cat > prog.c <<EOM
+#include <stdio.h>
+int main() { printf("I am a dummy()\n"); libfunc(); }
+EOM
+cat > lib.c <<EOM
+#include <stdio.h>
+void libfunc() { printf("libfunc()\n"); }
+EOM
+
+progs=( R python bwa samtools java blast )
+libs=( liba libb )
+
+for lib in "${libs[@]}"; do
+  libdir="sw/$lib/"
+  export LIBRARY_PATH=$libdir:$LIBRARY_PATH
+  libso="sw/$lib/${lib}.so"
+  mkdir -p "$libdir"
+  gcc -shared -fPIC -o "$libso" lib.c
+done
+
+for prog in "${progs[@]}"; do
+  rand=$[$RANDOM % 2]
+  progdir="sw/$prog/"
+  prog="$progdir/$prog"
+  libso="${libs[$rand]}.so"
+  mkdir -p "$progdir"
+  gcc -o "$prog" prog.c "-l:$libso"
+done
+
+rm prog.c lib.c

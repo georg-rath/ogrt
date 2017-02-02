@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+progs=( sw/R/R sw/python/python sw/bwa/bwa sw/samtools/samtools sw/java/java sw/blast/blast )
+
+for i in {1..100}; do
+  export JOBID=$i
+
+  rand=$[$RANDOM % 6]
+  ${progs[$rand]} > /dev/null
+  ls > /dev/null
+done
