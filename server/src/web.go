@@ -7,7 +7,8 @@ import "strings"
 
 func StartWebAPI() {
 	gin.SetMode(gin.ReleaseMode)
-	r := gin.Default()
+	r := gin.New()
+	r.Use(gin.Recovery())
 	r.GET("/metrics", func(c *gin.Context) {
 		outputs := outputMetrics(metrics.DefaultRegistry, time.Millisecond)
 		inputs := inputMetrics(metrics.DefaultRegistry, time.Millisecond)
