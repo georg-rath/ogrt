@@ -223,11 +223,9 @@ func writeToOutput(name string, id int, output *Output, messages chan interface{
 			outstandingOutput.Done()
 		case *OGRT.ProcessInfo:
 			metric := metrics.Get("output_" + name).(metrics.Timer)
-			log.Printf("%d: Persisting JobId=%s,pid=%d,bin=%s", id, message.GetJobId(), message.GetPid(), message.GetBinpath())
 			metric.Time(func() {
 				output.Writer.PersistProcessInfo(message)
 			})
-			log.Printf("%d: Persisting JobId=%s,pid=%d,bin=%s - Done", id, message.GetJobId(), message.GetPid(), message.GetBinpath())
 			outstandingOutput.Done()
 		}
 	}
