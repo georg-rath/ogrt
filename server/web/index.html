@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+	<title>OGRT Web Dashboard</title>
+	<meta name="description" content="OGRT Web Dashboard">
+  <script type="text/javascript">
+  var metrics = {}
+  var pageInitialized = 0
+
+  function loadMetrics() {
+      var xmlhttp = new XMLHttpRequest();
+
+      xmlhttp.onload = function(e) {
+           metrics = e.target.response;
+           if(!pageInitialized) {
+            initPage();
+            setInterval(loadMetrics, 1000);
+            pageInitialized = 1;
+           }
+           updateMetrics();
+      };
+
+      xmlhttp.open("GET", "../metrics", true);
+      xmlhttp.responseType = 'json';
+      xmlhttp.send();
+  }
+
+  function createStructure(div, data) {
+    var num = 0;
+    var row;
+
+    Object.keys(data).forEach(function(key) {
+        if(num % 3 == 0) {
+          if(row != null) {
+            div.appendChild(row)
+          }
+          row = document.createElement('div');
+          row.className = "row"
+        }
+        num++;
+
+        var element = document.createElement('div')
+        element.className = "col-4"
+        element.innerHTML = `
+          <h2>${key}</h2>
+          <table class="table">
+            <tr>
+              <th scope="col">Metric</th>
+              <th scope="col">Value</th>
+            </tr>
+            <tr>
+              <th scope="row">Processed</th>
+              <td id="${key}_processed"></td>
+            </tr>
+            <tr>
+              <th scope="row">Rate 1m</th>
+              <td id="${key}_rate1m"></td>
+            </tr>
+            <tr>
+              <th scope="row">Rate 5m</th>
+              <td id="${key}_rate5m"></td>
+            </tr>
+            <tr>
+              <th scope="row">Rate 15m</th>
+              <td id="${key}_rate15m"></td>
+            </tr>
+            <tr>
+              <th scope="row">Duration Min</th>
+              <td id="${key}_duration_min"></td>
+            </tr>
+            <tr>
+              <th scope="row">Duration Max</th>
+              <td id="${key}_duration_max"></td>
+            </tr>
+            <tr>
+              <th scope="row">Duration Median</th>
+              <td id="${key}_duration_mean"></td>
+            </tr>
+          </table>`
+        row.appendChild(element)
+      }
+    )
+    if(row == null) {
+      var msg = document.createElement('p');
+      msg.innerHTML += '<b>none configured</b>';
+      div.appendChild(msg);
+    } else {
+      div.appendChild(row)
+    }
+  }
+
+  function initPage() {
+    var outputs = document.getElementById('outputs');
+    createStructure(outputs, metrics.outputs);
+    var inputs = document.getElementById('inputs');
+    createStructure(inputs, metrics.inputs);
+  }
+
+  function updateMetrics() {
+    Object.keys(metrics.outputs).forEach(function(key) {
+        updateSingle(key, metrics.outputs[key]);
+      }
+    )
+    Object.keys(metrics.inputs).forEach(function(key) {
+        updateSingle(key, metrics.inputs[key]);
+      }
+    )
+  }
+
+  function updateSingle(name, data) {
+    document.getElementById(`${name}_processed`).innerHTML     = data.count
+    document.getElementById(`${name}_rate1m`).innerHTML        = data.rate1m.toFixed(2)
+    document.getElementById(`${name}_rate5m`).innerHTML        = data.rate5m.toFixed(2)
+    document.getElementById(`${name}_rate15m`).innerHTML       = data.rate15m.toFixed(2)
+    document.getElementById(`${name}_duration_min`).innerHTML  = data.duration_min.toFixed(2) + " ms"
+    document.getElementById(`${name}_duration_max`).innerHTML  = data.duration_max.toFixed(2) + " ms"
+    document.getElementById(`${name}_duration_mean`).innerHTML = data.duration_mean.toFixed(2) + " ms"
+  }
+
+  window.onload = loadMetrics
+  </script>
+	<link href="css/minimal.css" rel="stylesheet">
+</head>
+
+<body>
+<div class="container">
+	<header>
+		<a class="logo">OGRT Web Dashboard</a>
+	</header>
+
+  <div class="row">
+		<div id="inputs" class="col-12">
+			<h1>Inputs</h1>
+			<hr>
+			<p>Inputs implicitly configured</p>
+
+    </div>
+  </div>
+
+	<div class="row">
+		<div id="outputs" class="col-12">
+			<h1>Outputs</h1>
+			<hr>
+			<p>Outputs configured in ogrt.conf</p>
+
+    </div>
+  </div>
+</div>
+</body>
+</html>

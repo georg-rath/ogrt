@@ -46,6 +46,8 @@ type Configuration struct {
 	MaxReceiveBuffer uint32
 	DebugEndpoint    bool
 	PrintMetrics     uint32
+	WebAPI           bool
+	WebAPIAddress    string
 	Outputs          map[string]Output
 	InfluxMetrics    InfluxMetrics
 }
@@ -76,6 +78,13 @@ func main() {
 		log.Printf("Instantiated DebugEndpoint at Port 8080 (http://0.0.0.0:8080/debug/metrics)")
 	}
 
+	if config.WebAPI == true {
+		if config.WebAPIAddress == "" {
+			config.WebAPIAddress = ":8080"
+		}
+		go StartWebAPI(config.WebAPIAddress)
+	}
+
 	// Listen for incoming connections.
 	listen_string := fmt.Sprintf("%s:%d", config.Address, config.Port)
 	ServerAddr, err := net.ResolveUDPAddr("udp", listen_string)
@@ -101,7 +110,11 @@ func main() {
 			case "JsonOverTcp":
 				output_.Writer = new(output.JsonOverTcpOutput)
 			case "JsonElasticSearch":
-				output_.Writer = new(output.JsonElasticSearchOutput)
+				fallthrough
+			case "JsonElasticSearch3":
+				output_.Writer = new(output.JsonElasticSearch3Output)
+			case "JsonElasticSearch5":
+				output_.Writer = new(output.JsonElasticSearch5Output)
 			case "JsonFile":
 				output_.Writer = new(output.JsonFileOutput)
 			case "Null":
@@ -138,7 +151,7 @@ func main() {
 
 	/* register timer for receive() */
 	receive_timer := metrics.NewTimer()
-	metrics.Register("receive", receive_timer)
+	metrics.Register("input_receive", receive_timer)
 
 	/* output metrics on stderr */
 	if config.PrintMetrics > 0 {
@@ -163,7 +176,6 @@ func main() {
 	for {
 		// Read header from the connection
 		n, addr, err := listener.ReadFromUDP(packet_buffer)
-		log.Printf("read %d bytes from %s", n, addr)
 		if err == io.EOF {
 			continue
 		} else if err != nil {
@@ -178,8 +190,6 @@ func main() {
 			// Decode type and length of packet from header
 			msg_type := int32(binary.BigEndian.Uint32(packet_buffer[0:4]))
 			msg_length := binary.BigEndian.Uint32(packet_buffer[4:8])
-
-			log.Printf("type: %d, length: %d", msg_type, msg_length)
 
 			// allocate a buffer as big as the payload and read the rest of the packet
 			data := packet_buffer[8 : msg_length+8]
@@ -217,11 +227,9 @@ func writeToOutput(name string, id int, output *Output, messages chan interface{
 			outstandingOutput.Done()
 		case *OGRT.ProcessInfo:
 			metric := metrics.Get("output_" + name).(metrics.Timer)
-			log.Printf("%d: Persisting JobId=%s,pid=%d,bin=%s", id, message.GetJobId(), message.GetPid(), message.GetBinpath())
 			metric.Time(func() {
 				output.Writer.PersistProcessInfo(message)
 			})
-			log.Printf("%d: Persisting JobId=%s,pid=%d,bin=%s - Done", id, message.GetJobId(), message.GetPid(), message.GetBinpath())
 			outstandingOutput.Done()
 		}
 	}
