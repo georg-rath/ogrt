@@ -145,7 +145,7 @@ Compilation:
 1. Make sure you have a working installation of Golang
 5. Run 'make setup' in the 'server' directory
 5. Run 'make' in the 'server' directory
-6. Your server binary is 'server/ogrt-server'
+6. Your server binary is 'server/bin/ogrt-server'
 7. For guidance on how to configure the outputs check ogrt.conf in the
    server directory.
 

@@ -17,10 +17,11 @@ all: ogrt-server
 .PHONY: ogrt-server
 ogrt-server: .GOPATH/.ok
 	$Q go install $(if $V,-v) $(VERSION_FLAGS) $(IMPORT_PATH)/src/
+	$Q mv bin/src bin/ogrt-server
 
 dist: ogrt-server
 	$Q mkdir -p "dist/$(DIST)"
-	$Q cp ogrt-server "dist/$(DIST)"
+	$Q cp bin/ogrt-server "dist/$(DIST)"
 	$Q cp ogrt.conf "dist/$(DIST)"
 	$Q tar cjf "$(DIST).tar.bz2" "dist/$(DIST)"
 	$Q rm -rf "dist/$(DIST)"
