@@ -1,7 +1,7 @@
 package output
 
 import (
-	"protocol"
+	"github.com/georg-rath/ogrt/src/protocol"
 )
 
 type OGWriter interface {

@@ -137,18 +137,14 @@ Run "./configure --help" for a full list of options.
 
 ### server
 
-Requirements:
-
-* [Google Protocol Buffers](https://github.com/google/protobuf)
-* [A TOML parser](https://github.com/BurntSushi/toml)
+The server uses a Makefile that automatically sets the
+GOPATH and uses vendored dependecies.
 
 Compilation:
 
-1. Make sure you have a working installation of go
-2. go get "github.com/BurntSushi/toml"
-3. go get "github.com/golang/protobuf/proto"
-4. go get "github.com/vrischmann/go-metrics-influxdb"
-5. Run 'build.sh' in the 'server' directory
+1. Make sure you have a working installation of Golang
+5. Run 'make setup' in the 'server' directory
+5. Run 'make' in the 'server' directory
 6. Your server binary is 'server/ogrt-server'
 7. For guidance on how to configure the outputs check ogrt.conf in the
    server directory.

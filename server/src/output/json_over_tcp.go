@@ -2,9 +2,9 @@ package output
 
 import (
 	"encoding/json"
+	"github.com/georg-rath/ogrt/src/protocol"
 	"log"
 	"net"
-	"protocol"
 	"strings"
 )
 

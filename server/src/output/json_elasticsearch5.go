@@ -2,8 +2,8 @@ package output
 
 import (
 	"context"
+	"github.com/georg-rath/ogrt/src/protocol"
 	"log"
-	"protocol"
 	"strings"
 
 	"gopkg.in/olivere/elastic.v5"

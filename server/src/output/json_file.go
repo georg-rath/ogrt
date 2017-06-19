@@ -2,11 +2,11 @@ package output
 
 import (
 	"encoding/json"
+	"github.com/georg-rath/ogrt/src/protocol"
 	"io/ioutil"
 	"log"
 	"os"
 	"path"
-	"protocol"
 	"sync"
 )
 
