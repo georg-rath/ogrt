@@ -25,21 +25,6 @@ It extends on the concepts introduced with [XALT](https://github.com/Fahey-McLay
 * Only works on GLIBC systems (depends on LD_PRELOAD and GLIBC
   functions)
 
-
-### Presentations
-
-#### [[Into the Job: Gaining Insight into Your Workloads Using OGRT]](http://hpckp.org/index.php/conference/2016/159-into-the-job-gaining-insight-into-your-workloads-using-ogrt)
-
-Introduction of OGRT on the [HPCKP16](http://hpckp.org/index.php/conference/2016)
-
-#### How to stalk the users of your cluster using OGRT: [[slides]](http://goo.gl/zbvChr) [[recording]](https://www.youtube.com/watch?v=3l0eJq0nrOU)
-
-An introduction to OGRT on the [1st EasyBuild User
-Meeting](https://github.com/hpcugent/easybuild/wiki/1st-EasyBuild-User-Meeting), includes a demo of tracking functionality and
-getting the data into Elasticsearch/Kibana. Also some history on
-how OGRT came to be.
-
-
 ### Quick Start
 
 Get going with OGRT on your local machine in under 10 minutes!
@@ -66,6 +51,11 @@ In another terminal:
     LD_PRELOAD=$(find /tmp/ogrt/ -name libogrt.so) OGRT_ACTIVE=1 bash
     # every command you run in the spawned bash gets sent to the server
     ls
+
+#### Demo
+
+For an example with ElasticSearch backend and example data, please
+checkout the [[demo]](demo/) folder in this repository.
 
 ## Architecture
 
@@ -202,6 +192,23 @@ only ran "gcc --help". Of the shared libraries only libogrt.so was watermarked.
         "time": 1475062870,
         "username": "georg.rath"
     }
+
+### Presentations
+
+#### [[Putting Your Jobs Under the Microscope using OGRT]](http://hpckp.org/index.php/conference/2016/159-into-the-job-gaining-insight-into-your-workloads-using-ogrt)
+
+Overview of on what functionality OGRT provides at [FOSDEM2017](https://fosdem.org/2017/)
+
+#### [[Into the Job: Gaining Insight into Your Workloads Using OGRT]](http://hpckp.org/index.php/conference/2016/159-into-the-job-gaining-insight-into-your-workloads-using-ogrt)
+
+Introduction of OGRT on the [HPCKP16](http://hpckp.org/index.php/conference/2016)
+
+#### How to stalk the users of your cluster using OGRT: [[slides]](http://goo.gl/zbvChr) [[recording]](https://www.youtube.com/watch?v=3l0eJq0nrOU)
+
+An introduction to OGRT on the [1st EasyBuild User
+Meeting](https://github.com/hpcugent/easybuild/wiki/1st-EasyBuild-User-Meeting), includes a demo of tracking functionality and
+getting the data into Elasticsearch/Kibana. Also some history on
+how OGRT came to be.
 
 ## License
 

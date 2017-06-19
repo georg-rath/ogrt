@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+## OGRT Elasticsearch Backend
+#
+# spin up docker containers for elasticsearch and kibana
+# and create the OGRT mapping.
+#
+# it is probably wise to not use this in production.
+# just sayin'...
+##
+
+function is_available() {
+  command -v $1 >/dev/null 2>&1 || { echo >&2 "I require $1 but it's not installed. Aborting."; exit 1; }
+}
+
+is_available "docker"
+is_available "curl"
+
+echo "Spinning up docker containers..."
+docker run -d -v "$PWD/config":/usr/share/elasticsearch/config --name ogrt-fosdem17-es -p 9200:9200 elasticsearch:5 > /dev/null
+docker run --name ogrt-fosdem17-kibana --link ogrt-fosdem17-es:elasticsearch -p 5601:5601 -d kibana:5 > /dev/null
+
+echo "Waiting a bit for containers to become ready..."
+sleep 14
+
+# put mapping to elasticsearch
+es_result=$(curl -s -XPUT http://localhost:9200/ogrt -d '
+{
+    "mappings": {
+      "process": {
+        "properties": {
+          "binpath": {
+            "type": "text"
+          },
+          "signature": {
+            "type": "keyword"
+          },
+          "job_id": {
+            "type": "keyword"
+          },
+          "username": {
+            "type": "keyword"
+          },
+          "hostname": {
+            "type": "keyword"
+          },
+          "parent_pid": {
+            "type": "long"
+          },
+          "pid": {
+            "type": "long"
+          },
+          "shared_objects": {
+            "type": "nested",
+            "properties": {
+              "path": {
+                "type": "text"
+              },
+              "signature": {
+                "type": "keyword"
+              }
+            }
+          },
+          "time": {
+            "type": "date",
+            "format": "epoch_millis"
+          }
+        }
+      }
+  }
+}')
+echo "Elasticsearch says: $es_result"
+echo "Kibana should be on http://localhost:5601 - the index is 'ogrt'"

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+docker rm -f ogrt-fosdem17-es
+docker rm -f ogrt-fosdem17-kibana
