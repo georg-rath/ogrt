@@ -3,7 +3,7 @@
 ## Ominous Glibc Runtime Tracker
 
 OGRT is a tool designed to track user processes on a HPC cluster.
-It extends on the concepts introduced with [XALT](https://github.com/Fahey-McLay/xalt).
+It extends on the concepts introduced by [XALT](https://github.com/Fahey-McLay/xalt).
 
 ### Features
 
@@ -55,7 +55,7 @@ In another terminal:
 #### Demo
 
 For an example with ElasticSearch backend and example data, please
-checkout the [[demo]](demo/) folder in this repository.
+checkout the [demo](demo/) folder in this repository.
 
 ## Architecture
 
