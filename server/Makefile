@@ -23,7 +23,8 @@ dist: ogrt-server
 	$Q mkdir -p "dist/$(DIST)"
 	$Q cp bin/ogrt-server "dist/$(DIST)"
 	$Q cp ogrt.conf "dist/$(DIST)"
-	$Q tar cjf "$(DIST).tar.bz2" "dist/$(DIST)"
+	$Q cp -r web/ "dist/$(DIST)"
+	$Q tar cjf "dist/$(DIST).tar.bz2" "dist/$(DIST)"
 	$Q rm -rf "dist/$(DIST)"
 
 ##### ^^^^^^ EDIT ABOVE ^^^^^^ #####
