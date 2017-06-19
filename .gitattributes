@@ -1,2 +1,3 @@
 server/vendor/* linguist-vendored
+server/web/js/elasticsearch*.js linguist-vendored
 client/waf-bin linguist-vendored
