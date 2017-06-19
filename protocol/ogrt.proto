@@ -48,20 +48,3 @@ message JobInfo {
   required string job_id = 400;
   repeated ProcessInfo processes = 401;
 }
-
-message Fork {
-  required string hostname = 500;
-  required int32 parent_pid = 501;
-  required int32 child_pid = 502;
-  optional string name = 503;
-}
-
-message Execve {
-  required string hostname = 600;
-  required int32 pid = 601;
-  required int32 parent_pid = 602;
-  required string filename = 603;
-  repeated string arguments = 604;
-  repeated string environment_variables = 605;
-  optional string uuid = 606;
-}

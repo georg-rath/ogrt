@@ -15,8 +15,6 @@ It has these top-level messages:
 	Module
 	ProcessInfo
 	JobInfo
-	Fork
-	Execve
 */
 package OGRT
 
@@ -294,110 +292,6 @@ func (m *JobInfo) GetProcesses() []*ProcessInfo {
 		return m.Processes
 	}
 	return nil
-}
-
-type Fork struct {
-	Hostname         *string `protobuf:"bytes,500,req,name=hostname" json:"hostname,omitempty"`
-	ParentPid        *int32  `protobuf:"varint,501,req,name=parent_pid" json:"parent_pid,omitempty"`
-	ChildPid         *int32  `protobuf:"varint,502,req,name=child_pid" json:"child_pid,omitempty"`
-	Name             *string `protobuf:"bytes,503,opt,name=name" json:"name,omitempty"`
-	XXX_unrecognized []byte  `json:"-"`
-}
-
-func (m *Fork) Reset()         { *m = Fork{} }
-func (m *Fork) String() string { return proto.CompactTextString(m) }
-func (*Fork) ProtoMessage()    {}
-
-func (m *Fork) GetHostname() string {
-	if m != nil && m.Hostname != nil {
-		return *m.Hostname
-	}
-	return ""
-}
-
-func (m *Fork) GetParentPid() int32 {
-	if m != nil && m.ParentPid != nil {
-		return *m.ParentPid
-	}
-	return 0
-}
-
-func (m *Fork) GetChildPid() int32 {
-	if m != nil && m.ChildPid != nil {
-		return *m.ChildPid
-	}
-	return 0
-}
-
-func (m *Fork) GetName() string {
-	if m != nil && m.Name != nil {
-		return *m.Name
-	}
-	return ""
-}
-
-type Execve struct {
-	Hostname             *string  `protobuf:"bytes,600,req,name=hostname" json:"hostname,omitempty"`
-	Pid                  *int32   `protobuf:"varint,601,req,name=pid" json:"pid,omitempty"`
-	ParentPid            *int32   `protobuf:"varint,602,req,name=parent_pid" json:"parent_pid,omitempty"`
-	Filename             *string  `protobuf:"bytes,603,req,name=filename" json:"filename,omitempty"`
-	Arguments            []string `protobuf:"bytes,604,rep,name=arguments" json:"arguments,omitempty"`
-	EnvironmentVariables []string `protobuf:"bytes,605,rep,name=environment_variables" json:"environment_variables,omitempty"`
-	Uuid                 *string  `protobuf:"bytes,606,opt,name=uuid" json:"uuid,omitempty"`
-	XXX_unrecognized     []byte   `json:"-"`
-}
-
-func (m *Execve) Reset()         { *m = Execve{} }
-func (m *Execve) String() string { return proto.CompactTextString(m) }
-func (*Execve) ProtoMessage()    {}
-
-func (m *Execve) GetHostname() string {
-	if m != nil && m.Hostname != nil {
-		return *m.Hostname
-	}
-	return ""
-}
-
-func (m *Execve) GetPid() int32 {
-	if m != nil && m.Pid != nil {
-		return *m.Pid
-	}
-	return 0
-}
-
-func (m *Execve) GetParentPid() int32 {
-	if m != nil && m.ParentPid != nil {
-		return *m.ParentPid
-	}
-	return 0
-}
-
-func (m *Execve) GetFilename() string {
-	if m != nil && m.Filename != nil {
-		return *m.Filename
-	}
-	return ""
-}
-
-func (m *Execve) GetArguments() []string {
-	if m != nil {
-		return m.Arguments
-	}
-	return nil
-}
-
-func (m *Execve) GetEnvironmentVariables() []string {
-	if m != nil {
-		return m.EnvironmentVariables
-	}
-	return nil
-}
-
-func (m *Execve) GetUuid() string {
-	if m != nil && m.Uuid != nil {
-		return *m.Uuid
-	}
-	return ""
 }
 
 func init() {

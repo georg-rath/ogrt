@@ -21,8 +21,6 @@ typedef struct _OGRT__SharedObject OGRT__SharedObject;
 typedef struct _OGRT__Module OGRT__Module;
 typedef struct _OGRT__ProcessInfo OGRT__ProcessInfo;
 typedef struct _OGRT__JobInfo OGRT__JobInfo;
-typedef struct _OGRT__Fork OGRT__Fork;
-typedef struct _OGRT__Execve OGRT__Execve;
 
 
 /* --- enums --- */
@@ -118,37 +116,6 @@ struct  _OGRT__JobInfo
 #define OGRT__JOB_INFO__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&ogrt__job_info__descriptor) \
     , NULL, 0,NULL }
-
-
-struct  _OGRT__Fork
-{
-  ProtobufCMessage base;
-  char *hostname;
-  int32_t parent_pid;
-  int32_t child_pid;
-  char *name;
-};
-#define OGRT__FORK__INIT \
- { PROTOBUF_C_MESSAGE_INIT (&ogrt__fork__descriptor) \
-    , NULL, 0, 0, NULL }
-
-
-struct  _OGRT__Execve
-{
-  ProtobufCMessage base;
-  char *hostname;
-  int32_t pid;
-  int32_t parent_pid;
-  char *filename;
-  size_t n_arguments;
-  char **arguments;
-  size_t n_environment_variables;
-  char **environment_variables;
-  char *uuid;
-};
-#define OGRT__EXECVE__INIT \
- { PROTOBUF_C_MESSAGE_INIT (&ogrt__execve__descriptor) \
-    , NULL, 0, 0, NULL, 0,NULL, 0,NULL, NULL }
 
 
 /* OGRT__JobStart methods */
@@ -265,44 +232,6 @@ OGRT__JobInfo *
 void   ogrt__job_info__free_unpacked
                      (OGRT__JobInfo *message,
                       ProtobufCAllocator *allocator);
-/* OGRT__Fork methods */
-void   ogrt__fork__init
-                     (OGRT__Fork         *message);
-size_t ogrt__fork__get_packed_size
-                     (const OGRT__Fork   *message);
-size_t ogrt__fork__pack
-                     (const OGRT__Fork   *message,
-                      uint8_t             *out);
-size_t ogrt__fork__pack_to_buffer
-                     (const OGRT__Fork   *message,
-                      ProtobufCBuffer     *buffer);
-OGRT__Fork *
-       ogrt__fork__unpack
-                     (ProtobufCAllocator  *allocator,
-                      size_t               len,
-                      const uint8_t       *data);
-void   ogrt__fork__free_unpacked
-                     (OGRT__Fork *message,
-                      ProtobufCAllocator *allocator);
-/* OGRT__Execve methods */
-void   ogrt__execve__init
-                     (OGRT__Execve         *message);
-size_t ogrt__execve__get_packed_size
-                     (const OGRT__Execve   *message);
-size_t ogrt__execve__pack
-                     (const OGRT__Execve   *message,
-                      uint8_t             *out);
-size_t ogrt__execve__pack_to_buffer
-                     (const OGRT__Execve   *message,
-                      ProtobufCBuffer     *buffer);
-OGRT__Execve *
-       ogrt__execve__unpack
-                     (ProtobufCAllocator  *allocator,
-                      size_t               len,
-                      const uint8_t       *data);
-void   ogrt__execve__free_unpacked
-                     (OGRT__Execve *message,
-                      ProtobufCAllocator *allocator);
 /* --- per-message closures --- */
 
 typedef void (*OGRT__JobStart_Closure)
@@ -323,12 +252,6 @@ typedef void (*OGRT__ProcessInfo_Closure)
 typedef void (*OGRT__JobInfo_Closure)
                  (const OGRT__JobInfo *message,
                   void *closure_data);
-typedef void (*OGRT__Fork_Closure)
-                 (const OGRT__Fork *message,
-                  void *closure_data);
-typedef void (*OGRT__Execve_Closure)
-                 (const OGRT__Execve *message,
-                  void *closure_data);
 
 /* --- services --- */
 
@@ -342,8 +265,6 @@ extern const ProtobufCMessageDescriptor ogrt__shared_object__descriptor;
 extern const ProtobufCMessageDescriptor ogrt__module__descriptor;
 extern const ProtobufCMessageDescriptor ogrt__process_info__descriptor;
 extern const ProtobufCMessageDescriptor ogrt__job_info__descriptor;
-extern const ProtobufCMessageDescriptor ogrt__fork__descriptor;
-extern const ProtobufCMessageDescriptor ogrt__execve__descriptor;
 
 PROTOBUF_C__END_DECLS
 
