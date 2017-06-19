@@ -4,6 +4,8 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/BurntSushi/toml"
+	"github.com/georg-rath/ogrt/src/output"
+	"github.com/georg-rath/ogrt/src/protocol"
 	"github.com/golang/protobuf/proto"
 	"github.com/rcrowley/go-metrics"
 	"github.com/rcrowley/go-metrics/exp"
@@ -14,14 +16,12 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"output"
-	"protocol"
 	"sync"
 	"syscall"
 	"time"
 )
 
-var VERSION string
+var Version string
 
 var config Configuration
 
@@ -62,7 +62,7 @@ var shutdown = false
 func main() {
 	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
 
-	log.Printf("ogrt-server %s", VERSION)
+	log.Printf("ogrt-server %s", Version)
 
 	exitChannel = make(chan bool)
 

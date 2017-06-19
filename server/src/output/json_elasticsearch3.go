@@ -1,8 +1,8 @@
 package output
 
 import (
+	"github.com/georg-rath/ogrt/src/protocol"
 	"log"
-	"protocol"
 	"strings"
 
 	"gopkg.in/olivere/elastic.v3"

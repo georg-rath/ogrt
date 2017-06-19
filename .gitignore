@@ -4,3 +4,5 @@ client/.*waf*
 client/Makefile
 client/vendor
 server/dist
+server/.GOPATH
+server/bin
