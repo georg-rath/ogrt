@@ -24,9 +24,8 @@ char *ogrt_normalize_path(const char *path) {
   }
   char *ret = realpath(path, normalized_path);
   if(ret == NULL) {
-    perror("realpath");
     free(normalized_path);
-    return NULL;
+    return strdup(path);
   }
   return normalized_path;
 }
