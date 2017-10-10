@@ -43,14 +43,7 @@ int read_signature(const void *note, uint8_t *ret_version, char **ret_signature)
  */
 int handle_program_header(struct dl_phdr_info *info, __attribute__((unused))size_t size, void *data)
 {
-  /** if there is a name, normalize it's path **/
-  char *so_name = NULL;
-  if(strlen(info->dlpi_name) > 0) {
-    so_name = ogrt_normalize_path(info->dlpi_name);
-    Log(OGRT_LOG_DBG, "[D] \t\t %s\n", so_name);
-  } else {
-    so_name = strdup(info->dlpi_name);
-  }
+  char *so_name = ogrt_normalize_path(info->dlpi_name);
 
   Log(OGRT_LOG_DBG, "[D] name=%s (%d segments)\n", info->dlpi_name, info->dlpi_phnum);
 
