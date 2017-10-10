@@ -5,6 +5,7 @@ import (
 	"github.com/georg-rath/ogrt/src/protocol"
 	"log"
 	"strings"
+	"time"
 
 	"gopkg.in/olivere/elastic.v5"
 )
@@ -13,6 +14,7 @@ type JsonElasticSearch5Output struct {
 	OGWriter
 	client *elastic.Client
 	index  string
+	bulk   *elastic.BulkProcessor
 }
 
 func (fw *JsonElasticSearch5Output) Open(params string) {
@@ -32,6 +34,17 @@ func (fw *JsonElasticSearch5Output) Open(params string) {
 		log.Fatal(err, ". Did you use the right version of ElasticSearch? I am expecting version 5.")
 	}
 	fw.client = client
+
+	bulk, err := client.BulkProcessor().Name("es5-bulk").
+		Workers(1).
+		BulkActions(1000).
+		BulkSize(2 << 20).
+		FlushInterval(2 * time.Second).
+		Do(context.Background())
+	if err != nil {
+		log.Fatal(err)
+	}
+	fw.bulk = bulk
 }
 
 func (fw *JsonElasticSearch5Output) PersistJobStart(job_start *OGRT.JobStart) {
@@ -43,11 +56,12 @@ func (fw *JsonElasticSearch5Output) PersistJobEnd(job_end *OGRT.JobEnd) {
 func (fw *JsonElasticSearch5Output) PersistProcessInfo(process_info *OGRT.ProcessInfo) {
 	// set time to milliseconds
 	*process_info.Time = *process_info.Time * int64(1000)
-	_, err := fw.client.Index().Index(fw.index).Type("process").BodyJson(process_info).Do(context.TODO())
-	if err != nil {
-		log.Println("Could not index JSON in ElasticSearch: ", err)
-	}
+
+	req := elastic.NewBulkIndexRequest().Index(fw.index).Type("process").Doc(process_info)
+	fw.bulk.Add(req)
 }
 
 func (fw *JsonElasticSearch5Output) Close() {
+	fw.bulk.Flush()
+	fw.bulk.Close()
 }
