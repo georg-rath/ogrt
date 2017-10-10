@@ -19,7 +19,6 @@ char *ogrt_normalize_path(const char *path) {
   char *normalized_path = malloc(PATH_MAX);
   if (normalized_path == NULL) {
     fprintf(stderr, "OGRT: memory allocate failed\n");
-    free(normalized_path);
     return NULL;
   }
   char *ret = realpath(path, normalized_path);
