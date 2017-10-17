@@ -188,7 +188,7 @@ func main() {
 
 		receive_timer.Time(func() {
 			// Decode type and length of packet from header
-			msg_type := int32(binary.BigEndian.Uint32(packet_buffer[0:4]))
+			msg_type := binary.BigEndian.Uint32(packet_buffer[0:4])
 			msg_length := binary.BigEndian.Uint32(packet_buffer[4:8])
 
 			// allocate a buffer as big as the payload and read the rest of the packet
@@ -196,7 +196,7 @@ func main() {
 
 			go func() {
 				switch msg_type {
-				case OGRT.MessageType_value["ProcessInfoMsg"]:
+				case uint32(OGRT.MessageType_ProcessInfoMsg):
 					msg := new(OGRT.ProcessInfo)
 
 					err = proto.Unmarshal(data, msg)
