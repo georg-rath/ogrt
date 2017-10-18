@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"debug/elf"
 	"encoding/binary"
+	"fmt"
 	"io"
 )
 
-var ogrtNoteType = []byte{0x4f, 0x47, 0x52, 0x54}
+var ogrtNoteType = []byte{0x54, 0x52, 0x47, 0x4F}
 
 type NoteInfo struct {
 	SectionName string
@@ -15,6 +16,11 @@ type NoteInfo struct {
 	Version     byte
 	UUID        string
 	Allocatable bool
+}
+
+func (n NoteInfo) String() string {
+	return fmt.Sprintf("SectionName: %s\nNoteName: %s\nVersion: %d\nUUID: %s\nAlloc: %t",
+		n.SectionName, n.NoteName, n.Version, n.UUID, n.Allocatable)
 }
 
 // Find OGRT signatures in ELF
@@ -32,7 +38,7 @@ func FindSignatures(f io.ReaderAt) (notes []NoteInfo, err error) {
 			}
 			if len(sectionData) >= 12 {
 				if bytes.Compare(ogrtNoteType, sectionData[8:12]) == 0 {
-					nameLength := binary.BigEndian.Uint32(sectionData[0:4])
+					nameLength := binary.LittleEndian.Uint32(sectionData[0:4])
 					ni := NoteInfo{
 						SectionName: s.Name,
 						NoteName:    string(sectionData[12 : 12+nameLength]),

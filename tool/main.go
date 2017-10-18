@@ -27,12 +27,17 @@ func main() {
 				return
 			}
 			defer f.Close()
-			s, err := FindSignatures(f)
+			sigs, err := FindSignatures(f)
 			if err != nil {
 				fmt.Println(err)
 				return
 			}
-			fmt.Println("found", len(s))
+			fmt.Println("Found", len(sigs), "signatures:")
+			for _, s := range sigs {
+				fmt.Println(s)
+			}
+		case "--generate-load":
+			generateLoad()
 		}
 	}
 }
