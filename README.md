@@ -195,7 +195,7 @@ only ran "gcc --help". Of the shared libraries only libogrt.so was watermarked.
 
 ### Presentations
 
-#### [[Putting Your Jobs Under the Microscope using OGRT]](http://hpckp.org/index.php/conference/2016/159-into-the-job-gaining-insight-into-your-workloads-using-ogrt)
+#### [[Putting Your Jobs Under the Microscope using OGRT]](https://archive.fosdem.org/2017/schedule/event/ogrt/)
 
 Overview of on what functionality OGRT provides at [FOSDEM2017](https://fosdem.org/2017/)
 
