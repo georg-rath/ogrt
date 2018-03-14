@@ -3,7 +3,8 @@
       "process": {
         "properties": {
           "binpath": {
-            "type": "text"
+            "type": "text",
+            "fielddata": true
           },
           "signature": {
             "type": "keyword"
@@ -27,7 +28,8 @@
             "type": "nested",
             "properties": {
               "path": {
-                "type": "text"
+                "type": "text",
+                "fielddata": true
               },
               "signature": {
                 "type": "keyword"
