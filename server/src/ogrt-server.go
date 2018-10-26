@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -163,7 +164,7 @@ func main() {
 	if config.InfluxMetrics.Interval > 0 {
 		log.Printf("sending metrics every %d seconds to %s (db: %s) as %s", config.InfluxMetrics.Interval, config.InfluxMetrics.URL, config.InfluxMetrics.Database, config.InfluxMetrics.User)
 		go influxdb.InfluxDB(
-			metrics.DefaultRegistry,                                  // metrics registry
+			metrics.DefaultRegistry, // metrics registry
 			time.Second*time.Duration(config.InfluxMetrics.Interval), // interval
 			config.InfluxMetrics.URL,                                 // the InfluxDB url
 			config.InfluxMetrics.Database,                            // your InfluxDB database
@@ -172,17 +173,18 @@ func main() {
 		)
 	}
 
-	bufferPool := sync.Pool{
-		New: func() interface{} { return make([]byte, config.MaxReceiveBuffer) },
-	}
+	bufferPool := NewStaticPool(int(config.MaxReceiveBuffer))
+
 	// Read the data waiting on the connection and put it in the data buffer
 	for {
-		packet_buffer := bufferPool.Get().([]byte)
+		packetBuffer := bufferPool.Get()
 		// Read header from the connection
-		n, addr, err := listener.ReadFromUDP(packet_buffer)
+		n, addr, err := listener.ReadFromUDP(packetBuffer)
 		if err == io.EOF {
+			bufferPool.Put(packetBuffer)
 			continue
 		} else if err != nil {
+			bufferPool.Put(packetBuffer)
 			if shutdown == true {
 				break
 			}
@@ -192,34 +194,42 @@ func main() {
 
 		receive_timer.Time(func() {
 			// Decode type and length of packet from header
-			msg_type := binary.BigEndian.Uint32(packet_buffer[0:4])
-			msg_length := binary.BigEndian.Uint32(packet_buffer[4:8])
+			msg_type := binary.BigEndian.Uint32(packetBuffer[0:4])
+			msg_length := binary.BigEndian.Uint32(packetBuffer[4:8])
 
 			// allocate a buffer as big as the payload and read the rest of the packet
-			data := packet_buffer[8 : msg_length+8]
+			data := packetBuffer[8 : msg_length+8]
 
 			go func() {
-				defer bufferPool.Put(packet_buffer)
+				var msg interface{}
+
 				switch msg_type {
 				case uint32(OGRT.MessageType_ProcessInfoMsg):
-					msg := &OGRT.ProcessInfo{}
+					pi := &OGRT.ProcessInfo{}
 
-					err = proto.Unmarshal(data, msg)
+					err = proto.Unmarshal(data, pi)
 					if err != nil {
 						log.Printf("Error decoding ExecveMsg: %s\n", err)
+						bufferPool.Put(packetBuffer)
 						return
 					}
+					msg = pi
+				default:
+					log.Println("unkown message type", msg_type)
+					return
+				}
+				bufferPool.Put(packetBuffer)
 
-					for _, c := range output_channels {
-						outstandingOutput.Add(1)
-						c <- msg
-					}
+				for _, c := range output_channels {
+					outstandingOutput.Add(1)
+					c <- msg
 				}
 			}()
 		})
 	}
 
 	<-exitChannel
+	log.Println(bufferPool.InFlight(), "packet buffers still in use")
 	log.Println("Thank you for using OGRT.")
 }
 
@@ -241,4 +251,36 @@ func writeToOutput(name string, id int, output *Output, messages chan interface{
 	output.Writer.Close()
 	log.Printf("output %s [%d]: closed output.", name, id)
 	output_wait.Done()
+}
+
+type StaticPool struct {
+	pool     sync.Pool
+	size     int
+	inFlight int64
+}
+
+func (s StaticPool) Get() []byte {
+	atomic.AddInt64(&s.inFlight, 1)
+	return s.pool.Get().([]byte)
+}
+
+func (s StaticPool) Put(buf []byte) {
+	if cap(buf) != s.size {
+		panic("buffer with wrong size returned to pool")
+	}
+	atomic.AddInt64(&s.inFlight, -1)
+	s.pool.Put(buf)
+}
+
+func (s StaticPool) InFlight() int64 {
+	return s.inFlight
+}
+
+func NewStaticPool(size int) *StaticPool {
+	return &StaticPool{
+		pool: sync.Pool{
+			New: func() interface{} { return make([]byte, size) },
+		},
+		size: size,
+	}
 }
