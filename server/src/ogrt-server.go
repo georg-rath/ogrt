@@ -3,13 +3,6 @@ package main
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/BurntSushi/toml"
-	"github.com/georg-rath/ogrt/src/output"
-	"github.com/georg-rath/ogrt/src/protocol"
-	"github.com/golang/protobuf/proto"
-	"github.com/rcrowley/go-metrics"
-	"github.com/rcrowley/go-metrics/exp"
-	"github.com/vrischmann/go-metrics-influxdb"
 	"io"
 	"log"
 	"net"
@@ -19,6 +12,14 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/BurntSushi/toml"
+	"github.com/georg-rath/ogrt/src/output"
+	"github.com/georg-rath/ogrt/src/protocol"
+	"github.com/golang/protobuf/proto"
+	"github.com/rcrowley/go-metrics"
+	"github.com/rcrowley/go-metrics/exp"
+	"github.com/vrischmann/go-metrics-influxdb"
 )
 
 var Version string
@@ -171,9 +172,12 @@ func main() {
 		)
 	}
 
-	packet_buffer := make([]byte, config.MaxReceiveBuffer)
+	bufferPool := sync.Pool{
+		New: func() interface{} { return make([]byte, config.MaxReceiveBuffer) },
+	}
 	// Read the data waiting on the connection and put it in the data buffer
 	for {
+		packet_buffer := bufferPool.Get().([]byte)
 		// Read header from the connection
 		n, addr, err := listener.ReadFromUDP(packet_buffer)
 		if err == io.EOF {
@@ -195,9 +199,10 @@ func main() {
 			data := packet_buffer[8 : msg_length+8]
 
 			go func() {
+				defer bufferPool.Put(packet_buffer)
 				switch msg_type {
 				case uint32(OGRT.MessageType_ProcessInfoMsg):
-					msg := new(OGRT.ProcessInfo)
+					msg := &OGRT.ProcessInfo{}
 
 					err = proto.Unmarshal(data, msg)
 					if err != nil {
