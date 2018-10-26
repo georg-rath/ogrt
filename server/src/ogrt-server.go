@@ -273,7 +273,8 @@ func (s StaticPool) Put(buf []byte) {
 }
 
 func (s StaticPool) InFlight() int64 {
-	return s.inFlight
+	inFlight := atomic.LoadInt64(&s.inFlight)
+	return inFlight
 }
 
 func NewStaticPool(size int) *StaticPool {
