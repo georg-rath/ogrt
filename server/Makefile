@@ -16,8 +16,7 @@ all: ogrt-server
 ### Code not in the repository root? Another binary? Add to the path like this.
 .PHONY: ogrt-server
 ogrt-server: .GOPATH/.ok
-	$Q go install $(if $V,-v) $(VERSION_FLAGS) $(IMPORT_PATH)/src/
-	$Q mv bin/src bin/ogrt-server
+	$Q go build $(if $V,-v) $(VERSION_FLAGS) -o bin/ogrt-server $(IMPORT_PATH)/src/
 
 dist: ogrt-server
 	$Q mkdir -p "dist/$(DIST)"
