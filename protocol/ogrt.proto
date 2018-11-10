@@ -1,50 +1,72 @@
+syntax = "proto3";
+
 package OGRT;
 
 enum MessageType {
-  JobStartMsg = 10;
+  JobStartMsg = 0;
   JobEndMsg = 11;
   ProcessInfoMsg = 12;
+  ProcessResourceMsg = 16;
   SharedObjectMsg = 13;
   ForkMsg = 14;
   ExecveMsg = 15;
 }
 
 message JobStart {
-  required string job_id = 100;
-  required int64 start_time = 101;
+  string job_id = 100;
+  int64 start_time = 101;
 }
 
 message JobEnd {
-  required string job_id = 200;
-  required int64 end_time = 201;
+  string job_id = 200;
+  int64 end_time = 201;
 }
 
 message SharedObject {
-  required string path = 400;
-  optional string signature = 401;
+  string path = 400;
+  string signature = 401;
 }
 
 message Module {
-  required string name = 700;
+  string name = 700;
 }
 
+/* sent at start of process */
 message ProcessInfo {
-  required string binpath = 300;
-  required int32 pid = 301;
-  required int32 parent_pid = 302;
-  required int64 time = 303;
-  optional string signature = 304;
-  optional string job_id = 305;
-  optional string username = 306;
-  optional string hostname = 307;
-  optional string cmdline = 308;
+  bytes uuid = 299;
+  string binpath = 300;
+  int32 pid = 301;
+  int32 parent_pid = 302;
+  int64 time = 303;
+  string signature = 304;
+  string job_id = 305;
+  string username = 306;
+  string hostname = 307;
+  string cmdline = 308;
   repeated string environment_variables = 309;
   repeated string arguments = 310;
   repeated SharedObject shared_objects = 311;
   repeated Module loaded_modules = 312;
 }
 
+/* sent at end of process */
+message ProcessResourceInfo {
+  bytes uuid = 99;
+  int64 time = 104;
+
+  /* resource info from getrusage() */
+  int64 ru_utime = 105;    /* user CPU time used */
+  int64 ru_stime = 106;    /* system CPU time used */
+  int64 ru_maxrss = 107;   /* maximum resident set size */
+  int64 ru_minflt = 108;   /* page reclaims (soft page faults) */
+  int64 ru_majflt = 109;   /* page faults (hard page faults) */
+  int64 ru_inblock = 110;  /* block input operations */
+  int64 ru_oublock = 111;  /* block output operations */
+  int64 ru_nvcsw = 112;    /* voluntary context switches */
+  int64 ru_nivcsw = 113;   /* involuntary context switches */
+}
+
 message JobInfo {
-  required string job_id = 400;
+  string job_id = 400;
   repeated ProcessInfo processes = 401;
 }

@@ -6,10 +6,15 @@ static int   __daemon_socket = -1;
 static pid_t __pid           =  0;
 static pid_t __parent_pid    =  0;
 static char  __hostname[HOST_NAME_MAX+1];
-
+static uuid_t __uuid = {0};
+static void (*saved_signal_handlers[32]) (int) = { NULL };
 
 FILE *ogrt_log_file;
 int ogrt_log_level;
+
+/** real functions without hooks */
+static int (*real_sigaction)(int, const struct sigaction *, struct sigaction *) = NULL;
+static sighandler_t (*real_signal)(int, sighandler_t) = NULL;
 
 /**
  * Initialize preload library.
@@ -18,10 +23,16 @@ int ogrt_log_level;
  * the daemon fails the init function will return with a non-zero exit code, but program
  * execution will continue as normal.
  */
-__attribute__((constructor)) int ogrt_preload_init_hook()
+ON_INIT
+int ogrt_preload_init_hook()
 {
   ogrt_log_file = stderr;
   ogrt_log_level = OGRT_LOG_INFO;
+
+  if(ogrt_env_enabled("OGRT_DBG")) {
+    ogrt_log_level = OGRT_LOG_DBG;
+  }
+  Log(OGRT_LOG_DBG, "called init hook\n");
 
   if(ogrt_env_enabled("OGRT_SILENT") || ogrt_env_enabled("OGRT_SCHLEICHFAHRT")) {
     ogrt_log_level = OGRT_LOG_NOTHING;
@@ -121,7 +132,48 @@ __attribute__((constructor)) int ogrt_preload_init_hook()
 
     freeaddrinfo(servinfo);
 
-    Log(OGRT_LOG_INFO, "Connected to socket.\n");
+    // hook signal functions to be able to wrap with our handler
+    real_sigaction = dlsym(RTLD_NEXT, "sigaction");
+    Log(OGRT_LOG_DBG, "sigaction() pointer: %p\n", real_sigaction);
+    if(real_sigaction == NULL) {
+      Log(OGRT_LOG_ERR, "Error in dlsym(): %s\n", dlerror());
+      __ogrt_active = 0;
+      return 1;
+    }
+    real_signal = dlsym(RTLD_NEXT, "signal");
+    Log(OGRT_LOG_DBG, "signal() pointer: %p\n", real_signal);
+    if(real_signal == NULL) {
+      Log(OGRT_LOG_ERR, "Error in dlsym(): %s\n", dlerror());
+      __ogrt_active = 0;
+      return 1;
+    }
+
+    // wrap signal handlers
+    int wrap_signals[] = {
+      SIGHUP, SIGINT, SIGQUIT, SIGILL, SIGABRT, SIGFPE, SIGSEGV, SIGPIPE, SIGALRM, SIGTERM,
+      SIGUSR1, SIGUSR2, SIGBUS, SIGPOLL, SIGPROF, SIGSYS, SIGTRAP, SIGVTALRM, SIGXCPU, SIGXFSZ,
+      -1
+    };
+    for(int i=0; wrap_signals[i] != -1; i++) {
+      struct sigaction old;
+      int current_signal = wrap_signals[i];
+
+      if((*real_sigaction)(current_signal, NULL, &old) == -1) {
+        Log(OGRT_LOG_ERR, "got no signal handler");
+        __ogrt_active = 0;
+        return 1;
+      }
+
+      saved_signal_handlers[current_signal] = old.sa_handler;
+      Log(OGRT_LOG_DBG, "%d: old signal handler is %p\n", current_signal, old.sa_handler);
+      old.sa_handler = signal_wrapper;
+
+      if((*real_sigaction)(current_signal, &old, NULL) == -1) {
+        Log(OGRT_LOG_ERR, "could not set signal handler");
+        __ogrt_active = 0;
+        return 1;
+      }
+    }
 
     Log(OGRT_LOG_INFO, "I be watchin' yo! (process %d [%s] with parent %d)\n", __pid, ogrt_get_binpath(__pid), getppid());
 
@@ -132,10 +184,82 @@ __attribute__((constructor)) int ogrt_preload_init_hook()
     }
   }
 
-  close(__daemon_socket);
   return 0;
 }
 
+ON_FINISH
+int ogrt_preload_finish_hook() {
+    int stderr_fp;
+    if (dup2(stderr_fp, STDERR_FILENO) != -1) {
+        ogrt_log_file = fdopen(stderr_fp, "w");
+    }
+    Log(OGRT_LOG_DBG, "called finish hook\n");
+
+    if(__ogrt_active == 1) {
+      if(!ogrt_send_resourceinfo()) {
+            Log(OGRT_LOG_ERR, "failed to send resource info\n");
+            return 1;
+      }
+    }
+    return 0;
+}
+
+OGRT_INTERNAL
+bool ogrt_send_resourceinfo() {
+  Log(OGRT_LOG_DBG, "sending resource info...\n");
+
+  OGRT__ProcessResourceInfo msg;
+  ogrt__process_resource_info__init(&msg);
+
+  struct timespec ts;
+  clock_gettime(CLOCK_REALTIME, &ts);
+  msg.time = (ts.tv_sec * (uint64_t)1000) + (ts.tv_nsec / 1000000);
+
+  msg.uuid.data = __uuid;
+  msg.uuid.len = 16;
+
+  struct rusage ru;
+  int ret = getrusage(RUSAGE_SELF, &ru);
+  if (ret == 0) {
+    msg.ru_utime    = (ru.ru_utime.tv_sec * (uint64_t)1000) + (ru.ru_utime.tv_usec / 1000);
+    msg.ru_stime    = (ru.ru_stime.tv_sec * (uint64_t)1000) + (ru.ru_stime.tv_usec / 1000);
+    msg.ru_maxrss   = ru.ru_maxrss;
+    msg.ru_minflt   = ru.ru_minflt;
+    msg.ru_majflt   = ru.ru_majflt;
+    msg.ru_inblock  = ru.ru_inblock;
+    msg.ru_oublock  = ru.ru_oublock;
+    msg.ru_nvcsw    = ru.ru_nvcsw;
+    msg.ru_nivcsw   = ru.ru_nivcsw;
+  }
+
+  memset(&ru, 0, sizeof(struct rusage));
+  ret = getrusage(RUSAGE_CHILDREN, &ru);
+  if (ret == 0) {
+    msg.ru_utime    += (ru.ru_utime.tv_sec * (uint64_t)1000) + (ru.ru_utime.tv_usec / 1000);
+    msg.ru_stime    += (ru.ru_stime.tv_sec * (uint64_t)1000) + (ru.ru_stime.tv_usec / 1000);
+    msg.ru_maxrss   += ru.ru_maxrss;
+    msg.ru_minflt   += ru.ru_minflt;
+    msg.ru_majflt   += ru.ru_majflt;
+    msg.ru_inblock  += ru.ru_inblock;
+    msg.ru_oublock  += ru.ru_oublock;
+    msg.ru_nvcsw    += ru.ru_nvcsw;
+    msg.ru_nivcsw   += ru.ru_nivcsw;
+  }
+
+
+  size_t msg_len = ogrt__process_resource_info__get_packed_size(&msg);
+  void *msg_serialized = NULL;
+  char *msg_buffer = NULL;
+  int send_length = ogrt_prepare_sendbuffer(OGRT__MESSAGE_TYPE__ProcessResourceMsg, msg_len, &msg_buffer, &msg_serialized);
+
+  ogrt__process_resource_info__pack(&msg, msg_serialized);
+  send(__daemon_socket, msg_buffer, send_length, 0);
+
+  free(msg_buffer);
+  return true;
+}
+
+OGRT_INTERNAL
 bool ogrt_send_processinfo() {
     //TODO: refactor the process.
     // it is kind of dirty. the currently running binary is not an so.
@@ -210,7 +334,7 @@ bool ogrt_send_processinfo() {
 #endif
     msg.pid = __pid;
     msg.parent_pid = __parent_pid;
-    msg.time = ts.tv_sec;
+    msg.time = (ts.tv_sec * (uint64_t)1000) + (ts.tv_nsec / 1000000);
     char *job_id = getenv(OGRT_ENV_JOBID);
     msg.job_id = job_id == NULL ? "UNKNOWN" : job_id;
 #if OGRT_MSG_SEND_USERNAME == 1
@@ -255,6 +379,10 @@ bool ogrt_send_processinfo() {
     }
     msg.n_shared_objects = so_infos->size-2;
     msg.shared_objects = shared_object_ptr;
+
+    uuid_generate(__uuid);
+    msg.uuid.data = __uuid;
+    msg.uuid.len= 16;
 
     size_t msg_len = ogrt__process_info__get_packed_size(&msg);
     void *msg_serialized = NULL;
@@ -312,6 +440,7 @@ bool ogrt_send_processinfo() {
  *
  * This function is incredibly ugly. Should be reworked, but it works, right?
  */
+OGRT_INTERNAL
 int ogrt_prepare_sendbuffer(const int message_type, const int payload_length, char **buffer, void **payload) {
   uint32_t type = htonl(message_type);
   uint32_t length = htonl(payload_length);
@@ -326,3 +455,55 @@ int ogrt_prepare_sendbuffer(const int message_type, const int payload_length, ch
   return total_length;
 }
 
+OGRT_INTERNAL
+void signal_wrapper(int signum) {
+    int stderr_fp;
+    if (dup2(stderr_fp, STDERR_FILENO) != -1) {
+        ogrt_log_file = fdopen(stderr_fp, "w");
+    }
+    Log(OGRT_LOG_DBG, "in wrapper for signal %d\n", signum);
+
+    if(__ogrt_active == 1) {
+      if(!ogrt_send_resourceinfo()) {
+        Log(OGRT_LOG_ERR, "failed to send resource info\n");
+        return;
+      }
+    }
+
+    if(saved_signal_handlers[signum] != NULL) {
+        Log(OGRT_LOG_DBG, "calling saved handler for %d\n", signum);
+        (*saved_signal_handlers[signum])(signum);
+        return;
+    }
+
+    exit(128+signum);
+}
+
+/** Hook Functions **/
+int sigaction(int signum, const struct sigaction *act, struct sigaction *oldact) {
+  Log(OGRT_LOG_DBG, "hooked sigaction for signal %d\n", signum);
+
+  if(act != NULL) {
+    if(act->sa_handler == SIG_IGN) {
+      Log(OGRT_LOG_DBG, "ignoring signal %d\n", signum);
+      return real_sigaction(signum, act, oldact);
+    }
+    Log(OGRT_LOG_DBG, "%d: wrapping function %p\n", signum, act->sa_handler);
+    saved_signal_handlers[signum] = act->sa_handler;
+    ((struct sigaction *)act)->sa_handler = signal_wrapper;
+  }
+  return real_sigaction(signum, (const struct sigaction *)act, oldact);
+}
+
+sighandler_t signal (int signum, sighandler_t action) {
+  Log(OGRT_LOG_DBG, "hooked signal() for signal %d\n", signum);
+  if(action == SIG_IGN) {
+    Log(OGRT_LOG_DBG, "ignoring signal %d\n", signum);
+    return real_signal(signum, action);
+  }
+
+  Log(OGRT_LOG_DBG, "%d: wrapping function %p\n", action);
+  saved_signal_handlers[signum] = action;
+  action = signal_wrapper;
+  return real_signal(signum, action);
+}

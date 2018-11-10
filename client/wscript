@@ -35,15 +35,20 @@ def options(opt):
 
 def configure(conf):
     conf.load('compiler_c gnu_dirs waf_unit_test')
+    conf.cc_add_flags()
+    conf.env.append_unique('CFLAGS', ['-g', '-std=c99'])
+    if not [flag for flag in conf.env.CFLAGS if flag.startswith('-O')]:
+        conf.env.append_unique('CFLAGS', '-O3')
     conf.check_cc(stlib='elf')
     conf.check(header_name="gelf.h")
+    conf.check_cc(lib='dl')
     conf.check_cc(stlib='uuid', fragment="#include <uuid/uuid.h>\nint main() { uuid_t uuid;uuid_generate(uuid); }" )
     conf.check(header_name="uuid/uuid.h")
     conf.check_cc(stlib='protobuf-c')
     conf.check(header_name="protobuf-c/protobuf-c.h")
     conf.check(header_name="time.h")
     try:
-        conf.check_cc(msg="clock_gettime without librt", fragment="#include <time.h>\nint main() { struct timespec ts; clock_gettime(CLOCK_REALTIME, &ts); }")
+        conf.check_cc(msg="clock_gettime without librt", fragment="#define _POSIX_C_SOURCE 199309L\n#include <time.h>\nint main() { struct timespec ts; clock_gettime(CLOCK_REALTIME, &ts); }")
     except conf.errors.WafError:
         conf.check_cc(msg="clock_gettime with librt", lib = 'rt', uselib_store='rt', fragment="#include <time.h>\nint main() { struct timespec ts; clock_gettime(CLOCK_REALTIME, &ts); }")
 
@@ -75,6 +80,7 @@ def configure(conf):
         conf.define('OGRT_FILTER_REGEXPS_LIST', filter_regexps, quote=False)
         conf.define('OGRT_FILTER_REGEXPS_LIST_LENGTH', filter_regexps_length)
 
+
     conf.write_config_header('config.h')
 
 def build(bld):
@@ -83,12 +89,13 @@ def build(bld):
 
     bld(features='subst', source='src/ogrt-cmdline.h.in', target='ogrt-cmdline.h',  VERSION = git_version() )
 
-    bld(features='c cprogram', cflags="-g -O3 --std=c99", includes='.', source=bin_sources, target='ogrt', stlib=['protobuf-c', 'uuid', 'elf'])
-    bld(features='c cshlib', cflags="-g -O3 -std=c99", includes='.', source=lib_sources, use='rt', target='ogrt', stlib=['protobuf-c', 'uuid'])
+    bld.program(includes='.', source=bin_sources, target='ogrt', stlib=['protobuf-c', 'uuid', 'elf'])
+    bld.shlib(includes='.', source=lib_sources, use=['rt','dl'], target='ogrt', stlib=['protobuf-c', 'uuid'])
+    bld.stlib(includes='.', source=lib_sources, use=['rt','dl'], target='ogrt', stlib=['protobuf-c', 'uuid'])
 
-    bld(features='c cprogram test', install_path=None, cflags="-g -O3 --std=c99", includes='.', source=lib_sources + [ "test/test_util.c" ], use='rt', target='test_util', stlib=['protobuf-c', 'uuid', 'elf'])
-    bld(features='c cprogram test', install_path=None, cflags="-g -O3 --std=c99", includes='.', source=lib_sources + [ "test/test_readso.c" ], use='rt', target='test_readso', stlib=['protobuf-c', 'uuid', 'elf'])
-    bld(features='c cprogram test', install_path=None, cflags="-g -O3 --std=c99", includes='.', source=lib_sources + [ "test/test_processinfo.c" ], use='rt',  target='test_processinfo', stlib=['protobuf-c', 'uuid', 'elf'])
+    bld(features='c cprogram test', install_path=None, includes='.', source=lib_sources + [ "test/test_util.c" ], lib=['rt','dl'], target='test_util', stlib=['protobuf-c', 'uuid', 'elf'])
+    bld(features='c cprogram test', install_path=None, includes='.', source=lib_sources + [ "test/test_readso.c" ], lib=['rt','dl'], target='test_readso', stlib=['protobuf-c', 'uuid', 'elf'])
+    bld(features='c cprogram test', install_path=None, includes='.', source=lib_sources + [ "test/test_processinfo.c" ], lib=['rt', 'dl'],  target='test_processinfo', stlib=['protobuf-c', 'uuid', 'elf'])
 
     bld.options.all_tests = True
 

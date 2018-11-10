@@ -40,8 +40,6 @@ func (fw *JsonElasticSearch3Output) PersistJobEnd(job_end *OGRT.JobEnd) {
 }
 
 func (fw *JsonElasticSearch3Output) PersistProcessInfo(process_info *OGRT.ProcessInfo) {
-	// set time to milliseconds
-	*process_info.Time = *process_info.Time * int64(1000)
 	_, err := fw.client.Index().Index(fw.index).Type("process").BodyJson(process_info).Do()
 	if err != nil {
 		log.Println("Could not index JSON in ElasticSearch: ", err)

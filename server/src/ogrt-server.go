@@ -213,7 +213,20 @@ func main() {
 						bufferPool.Put(packetBuffer)
 						return
 					}
+					fmt.Println(pi)
 					msg = pi
+				case uint32(OGRT.MessageType_ProcessResourceMsg):
+					pri := &OGRT.ProcessResourceInfo{}
+
+					err = proto.Unmarshal(data, pri)
+					if err != nil {
+						log.Printf("Error decoding ResourceInfoMsg: %s\n", err)
+						bufferPool.Put(packetBuffer)
+						return
+					}
+
+					fmt.Println(pri)
+					// msg = pi
 				default:
 					log.Println("unkown message type", msg_type)
 					return

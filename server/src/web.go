@@ -1,9 +1,12 @@
 package main
 
-import "github.com/gin-gonic/gin"
-import "github.com/rcrowley/go-metrics"
-import "time"
-import "strings"
+import (
+	"strings"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/rcrowley/go-metrics"
+)
 
 func StartWebAPI(address string) {
 	gin.SetMode(gin.ReleaseMode)

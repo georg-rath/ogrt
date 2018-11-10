@@ -48,7 +48,7 @@ func (fw *JsonFileOutput) PersistProcessInfo(process_info *OGRT.ProcessInfo) {
 		}
 	} else {
 		jid := process_info.GetJobId()
-		job_info.JobId = &jid
+		job_info.JobId = jid
 	}
 	job_info.Processes = append(job_info.Processes, process_info)
 

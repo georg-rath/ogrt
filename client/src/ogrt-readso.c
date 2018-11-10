@@ -20,6 +20,7 @@
  * All values are padded to 4 byte boundaries.
  * OGRT version is 1 byte, uuid is a null terminated string.
  */
+OGRT_INTERNAL
 int read_signature(const void *note, uint8_t *ret_version, char **ret_signature) {
   const elf_note *elf_note = note;
 
@@ -41,6 +42,7 @@ int read_signature(const void *note, uint8_t *ret_version, char **ret_signature)
 /**
  * Process an ELF program header section (located in memory).
  */
+OGRT_INTERNAL
 int handle_program_header(struct dl_phdr_info *info, __attribute__((unused))size_t size, void *data)
 {
   char *so_name = ogrt_normalize_path(info->dlpi_name);
@@ -82,6 +84,7 @@ int handle_program_header(struct dl_phdr_info *info, __attribute__((unused))size
   return 0;
 }
 
+OGRT_INTERNAL
 int count_program_header(__attribute__((unused)) struct dl_phdr_info *info, __attribute__((unused)) size_t size, void *data) {
   uint32_t *count = data;
   (*count)++;
@@ -90,6 +93,7 @@ int count_program_header(__attribute__((unused)) struct dl_phdr_info *info, __at
 }
 
 
+OGRT_INTERNAL
 so_infos *ogrt_get_loaded_so()
 {
   Log(OGRT_LOG_DBG, "[D] Displaying loaded libraries for pid %d (%s):\n", getpid(), ogrt_get_binpath(getpid()));

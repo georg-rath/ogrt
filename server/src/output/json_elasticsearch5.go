@@ -54,9 +54,6 @@ func (fw *JsonElasticSearch5Output) PersistJobEnd(job_end *OGRT.JobEnd) {
 }
 
 func (fw *JsonElasticSearch5Output) PersistProcessInfo(process_info *OGRT.ProcessInfo) {
-	// set time to milliseconds
-	*process_info.Time = *process_info.Time * int64(1000)
-
 	req := elastic.NewBulkIndexRequest().Index(fw.index).Type("process").Doc(process_info)
 	fw.bulk.Add(req)
 }
