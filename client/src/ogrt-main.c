@@ -204,6 +204,7 @@ int ogrt_preload_finish_hook() {
     return 0;
 }
 
+/** sum up consumed resources and send a resource info message to server */
 OGRT_INTERNAL
 bool ogrt_send_resourceinfo() {
   Log(OGRT_LOG_DBG, "sending resource info...\n");
@@ -455,6 +456,8 @@ int ogrt_prepare_sendbuffer(const int message_type, const int payload_length, ch
   return total_length;
 }
 
+
+/** wrap signals to send resource messages after program termination via signal */
 OGRT_INTERNAL
 void signal_wrapper(int signum) {
     int stderr_fp;
