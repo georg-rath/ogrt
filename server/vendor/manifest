@@ -26,21 +26,11 @@
 			"notests": true
 		},
 		{
-			"importpath": "github.com/golang/protobuf/proto",
+			"importpath": "github.com/golang/protobuf",
 			"repository": "https://github.com/golang/protobuf",
 			"vcs": "git",
-			"revision": "75dceb112b174be156fa9952e66d3e99945572b4",
+			"revision": "1d3f30b51784bec5aad268e59fd3c2fc1c2fe73f",
 			"branch": "master",
-			"path": "/proto",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/golang/protobuf/ptypes/any",
-			"repository": "https://github.com/golang/protobuf",
-			"vcs": "git",
-			"revision": "e325f446bebc2998605911c0a2650d9920361d4a",
-			"branch": "master",
-			"path": "ptypes/any",
 			"notests": true
 		},
 		{
@@ -68,6 +58,14 @@
 			"revision": "0b4528b26de43d5504ec0623c184540f7c3e1a54",
 			"branch": "master",
 			"path": "pkg/escape",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/lib/pq",
+			"repository": "https://github.com/lib/pq",
+			"vcs": "git",
+			"revision": "9eb73efc1fcc404148b56765b0d3f61d9a5ef8ee",
+			"branch": "master",
 			"notests": true
 		},
 		{
@@ -168,6 +166,15 @@
 			"revision": "5128de728888ea5cc98be50b4efaabc4d3491274",
 			"branch": "master",
 			"path": "/cover",
+			"notests": true
+		},
+		{
+			"importpath": "google.golang.org/genproto/protobuf/field_mask",
+			"repository": "https://github.com/google/go-genproto",
+			"vcs": "git",
+			"revision": "31ac5d88444a9e7ad18077db9a165d793ad06a2e",
+			"branch": "master",
+			"path": "/protobuf/field_mask",
 			"notests": true
 		},
 		{

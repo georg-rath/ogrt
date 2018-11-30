@@ -53,6 +53,9 @@ func (fw *JsonElasticSearch5Output) PersistJobStart(job_start *OGRT.JobStart) {
 func (fw *JsonElasticSearch5Output) PersistJobEnd(job_end *OGRT.JobEnd) {
 }
 
+func (fw *JsonElasticSearch5Output) PersistProcessResourceInfo(process_info *OGRT.ProcessResourceInfo) {
+}
+
 func (fw *JsonElasticSearch5Output) PersistProcessInfo(process_info *OGRT.ProcessInfo) {
 	req := elastic.NewBulkIndexRequest().Index(fw.index).Type("process").Doc(process_info)
 	fw.bulk.Add(req)

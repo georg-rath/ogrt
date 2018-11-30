@@ -39,6 +39,9 @@ func (fw *JsonElasticSearch3Output) PersistJobStart(job_start *OGRT.JobStart) {
 func (fw *JsonElasticSearch3Output) PersistJobEnd(job_end *OGRT.JobEnd) {
 }
 
+func (fw *JsonElasticSearch3Output) PersistProcessResourceInfo(process_info *OGRT.ProcessResourceInfo) {
+}
+
 func (fw *JsonElasticSearch3Output) PersistProcessInfo(process_info *OGRT.ProcessInfo) {
 	_, err := fw.client.Index().Index(fw.index).Type("process").BodyJson(process_info).Do()
 	if err != nil {

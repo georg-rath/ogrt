@@ -513,7 +513,7 @@ const ProtobufCMessageDescriptor ogrt__module__descriptor =
   (ProtobufCMessageInit) ogrt__module__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
-static const ProtobufCFieldDescriptor ogrt__process_info__field_descriptors[14] =
+static const ProtobufCFieldDescriptor ogrt__process_info__field_descriptors[15] =
 {
   {
     "uuid",
@@ -683,11 +683,24 @@ static const ProtobufCFieldDescriptor ogrt__process_info__field_descriptors[14] 
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
+  {
+    "cwd",
+    313,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_STRING,
+    0,   /* quantifier_offset */
+    offsetof(OGRT__ProcessInfo, cwd),
+    NULL,
+    &protobuf_c_empty_string,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
 };
 static const unsigned ogrt__process_info__field_indices_by_name[] = {
   11,   /* field[11] = arguments */
   1,   /* field[1] = binpath */
   9,   /* field[9] = cmdline */
+  14,   /* field[14] = cwd */
   10,   /* field[10] = environment_variables */
   8,   /* field[8] = hostname */
   6,   /* field[6] = job_id */
@@ -703,7 +716,7 @@ static const unsigned ogrt__process_info__field_indices_by_name[] = {
 static const ProtobufCIntRange ogrt__process_info__number_ranges[1 + 1] =
 {
   { 299, 0 },
-  { 0, 14 }
+  { 0, 15 }
 };
 const ProtobufCMessageDescriptor ogrt__process_info__descriptor =
 {
@@ -713,7 +726,7 @@ const ProtobufCMessageDescriptor ogrt__process_info__descriptor =
   "OGRT__ProcessInfo",
   "OGRT",
   sizeof(OGRT__ProcessInfo),
-  14,
+  15,
   ogrt__process_info__field_descriptors,
   ogrt__process_info__field_indices_by_name,
   1,  ogrt__process_info__number_ranges,

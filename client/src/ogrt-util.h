@@ -15,6 +15,8 @@
 #include <stdbool.h>
 #include <pwd.h>
 #include <fcntl.h>
+#include <link.h>
+
 #include "ogrt-log.h"
 
 /* function prototypes */
@@ -24,5 +26,6 @@ char *ogrt_get_binpath(const pid_t pid);
 char *ogrt_get_cmdline(const pid_t pid);
 char *ogrt_get_username();
 char *ogrt_get_hostname();
+char *ogrt_get_cwd();
 
 #endif

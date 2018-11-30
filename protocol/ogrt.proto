@@ -43,6 +43,7 @@ message ProcessInfo {
   string username = 306;
   string hostname = 307;
   string cmdline = 308;
+  string cwd = 313;
   repeated string environment_variables = 309;
   repeated string arguments = 310;
   repeated SharedObject shared_objects = 311;

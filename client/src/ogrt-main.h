@@ -21,6 +21,7 @@
 #include <errno.h>
 #include <regex.h>
 #include <signal.h>
+#include <link.h>
 #include "ogrt.pb-c.h"
 #include "ogrt-readso.h"
 #include "ogrt-log.h"

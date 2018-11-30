@@ -17,6 +17,9 @@ func (fw *NullOutput) PersistJobStart(job_start *OGRT.JobStart) {
 func (fw *NullOutput) PersistJobEnd(job_end *OGRT.JobEnd) {
 }
 
+func (fw *NullOutput) PersistProcessResourceInfo(process_info *OGRT.ProcessResourceInfo) {
+}
+
 func (fw *NullOutput) PersistProcessInfo(process_info *OGRT.ProcessInfo) {
 }
 

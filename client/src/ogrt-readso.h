@@ -9,11 +9,10 @@
 /* includes */
 #include <stdio.h>
 #include <stdarg.h>
-#include <link.h>
 #include <dlfcn.h>
 #include <gelf.h>
+#include <link.h>
 #include "ogrt-log.h"
-#include "ogrt-util.h"
 
 /* data structures */
 struct elf_note {
@@ -40,7 +39,6 @@ typedef struct so_infos so_infos;
 
 /* function prototypes */
 int ogrt_read_signature(const char *note, uint8_t *ret_version, char **ret_signature);
-int handle_program_header(struct dl_phdr_info *info, size_t size, void *data);
 so_infos *ogrt_get_loaded_so();
 
 #endif

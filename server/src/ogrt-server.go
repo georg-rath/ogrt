@@ -117,6 +117,8 @@ func main() {
 				output_.Writer = new(output.JsonElasticSearch3Output)
 			case "JsonElasticSearch5":
 				output_.Writer = new(output.JsonElasticSearch5Output)
+			case "PgSqlAggregator":
+				output_.Writer = new(output.PgSqlAggregatorOutput)
 			case "JsonFile":
 				output_.Writer = new(output.JsonFileOutput)
 			case "Null":
@@ -213,7 +215,6 @@ func main() {
 						bufferPool.Put(packetBuffer)
 						return
 					}
-					fmt.Println(pi)
 					msg = pi
 				case uint32(OGRT.MessageType_ProcessResourceMsg):
 					pri := &OGRT.ProcessResourceInfo{}
@@ -225,8 +226,7 @@ func main() {
 						return
 					}
 
-					fmt.Println(pri)
-					// msg = pi
+					msg = pri
 				default:
 					log.Println("unkown message type", msg_type)
 					return
@@ -257,6 +257,12 @@ func writeToOutput(name string, id int, output *Output, messages chan interface{
 			metric := metrics.Get("output_" + name).(metrics.Timer)
 			metric.Time(func() {
 				output.Writer.PersistProcessInfo(message)
+			})
+			outstandingOutput.Done()
+		case *OGRT.ProcessResourceInfo:
+			metric := metrics.Get("output_" + name).(metrics.Timer)
+			metric.Time(func() {
+				output.Writer.PersistProcessResourceInfo(message)
 			})
 			outstandingOutput.Done()
 		}

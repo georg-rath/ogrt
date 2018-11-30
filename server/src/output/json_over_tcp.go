@@ -43,5 +43,8 @@ func (fw *JsonOverTcpOutput) PersistProcessInfo(process_info *OGRT.ProcessInfo) 
 	}
 }
 
+func (fw *JsonOverTcpOutput) PersistProcessResourceInfo(process_info *OGRT.ProcessResourceInfo) {
+}
+
 func (fw *JsonOverTcpOutput) Close() {
 }

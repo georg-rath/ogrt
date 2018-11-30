@@ -29,14 +29,16 @@ int ogrt_preload_init_hook()
   ogrt_log_file = stderr;
   ogrt_log_level = OGRT_LOG_INFO;
 
-  if(ogrt_env_enabled("OGRT_DBG")) {
-    ogrt_log_level = OGRT_LOG_DBG;
-  }
-  Log(OGRT_LOG_DBG, "called init hook\n");
-
   if(ogrt_env_enabled("OGRT_SILENT") || ogrt_env_enabled("OGRT_SCHLEICHFAHRT")) {
     ogrt_log_level = OGRT_LOG_NOTHING;
   }
+
+  if(ogrt_env_enabled("OGRT_DBG")) {
+    ogrt_log_level = OGRT_LOG_DBG;
+  }
+
+  Log(OGRT_LOG_DBG, "called init hook\n");
+
 
   if(ogrt_env_enabled("OGRT_DEBUG_INFO")) {
     cmdline_parser_print_version();
@@ -64,6 +66,23 @@ int ogrt_preload_init_hook()
 
   if(ogrt_env_enabled("OGRT_ACTIVE")) {
     __ogrt_active = true;
+  }
+
+  // hook signal functions to be able to wrap with our handler
+  // this is done for the case where ogrt is inactive too - it will still hook signals
+  real_sigaction = dlsym(RTLD_NEXT, "sigaction");
+  Log(OGRT_LOG_DBG, "sigaction() pointer: %p\n", real_sigaction);
+  if(real_sigaction == NULL) {
+    Log(OGRT_LOG_ERR, "Error in dlsym(): %s\n", dlerror());
+    __ogrt_active = 0;
+    return 1;
+  }
+  real_signal = dlsym(RTLD_NEXT, "signal");
+  Log(OGRT_LOG_DBG, "signal() pointer: %p\n", real_signal);
+  if(real_signal == NULL) {
+    Log(OGRT_LOG_ERR, "Error in dlsym(): %s\n", dlerror());
+    __ogrt_active = 0;
+    return 1;
   }
 
   if(__ogrt_active && __daemon_socket < 0) {
@@ -132,21 +151,6 @@ int ogrt_preload_init_hook()
 
     freeaddrinfo(servinfo);
 
-    // hook signal functions to be able to wrap with our handler
-    real_sigaction = dlsym(RTLD_NEXT, "sigaction");
-    Log(OGRT_LOG_DBG, "sigaction() pointer: %p\n", real_sigaction);
-    if(real_sigaction == NULL) {
-      Log(OGRT_LOG_ERR, "Error in dlsym(): %s\n", dlerror());
-      __ogrt_active = 0;
-      return 1;
-    }
-    real_signal = dlsym(RTLD_NEXT, "signal");
-    Log(OGRT_LOG_DBG, "signal() pointer: %p\n", real_signal);
-    if(real_signal == NULL) {
-      Log(OGRT_LOG_ERR, "Error in dlsym(): %s\n", dlerror());
-      __ogrt_active = 0;
-      return 1;
-    }
 
     // wrap signal handlers
     int wrap_signals[] = {
@@ -329,6 +333,11 @@ bool ogrt_send_processinfo() {
     }
 #endif
 
+#if OGRT_MSG_SEND_CWD == 1
+    char *cwd = ogrt_get_cwd();
+    msg.cwd = cwd;
+#endif
+
 #if OGRT_MSG_SEND_CMDLINE == 1
     char *cmdline = ogrt_get_cmdline(__pid);
     msg.cmdline = cmdline;
@@ -411,13 +420,16 @@ bool ogrt_send_processinfo() {
     }
 #endif
 #if OGRT_MSG_SEND_USERNAME == 1
-    free(username);
+    if(username != NULL) { free(username); }
 #endif
 #if OGRT_MSG_SEND_HOSTNAME == 1
-    free(hostname);
+    if(hostname != NULL) { free(hostname); }
 #endif
 #if OGRT_MSG_SEND_CMDLINE == 1
-    free(cmdline);
+    if(cmdline != NULL) { free(cmdline); }
+#endif
+#if OGRT_MSG_SEND_CWD == 1
+    if(cwd != NULL) { free(cwd); }
 #endif
 #if OGRT_MSG_SEND_ENVIRONMENT == 1
 #ifdef OGRT_MSG_SEND_ENVIRONMENT_WHITELIST
@@ -485,6 +497,9 @@ void signal_wrapper(int signum) {
 /** Hook Functions **/
 int sigaction(int signum, const struct sigaction *act, struct sigaction *oldact) {
   Log(OGRT_LOG_DBG, "hooked sigaction for signal %d\n", signum);
+  if(!__ogrt_active) {
+    return real_sigaction(signum, (const struct sigaction *)act, oldact);
+  }
 
   if(act != NULL) {
     if(act->sa_handler == SIG_IGN) {
@@ -500,6 +515,10 @@ int sigaction(int signum, const struct sigaction *act, struct sigaction *oldact)
 
 sighandler_t signal (int signum, sighandler_t action) {
   Log(OGRT_LOG_DBG, "hooked signal() for signal %d\n", signum);
+  if(!__ogrt_active) {
+    return real_signal(signum, action);
+  }
+
   if(action == SIG_IGN) {
     Log(OGRT_LOG_DBG, "ignoring signal %d\n", signum);
     return real_signal(signum, action);

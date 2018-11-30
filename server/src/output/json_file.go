@@ -36,6 +36,9 @@ func (fw *JsonFileOutput) PersistJobStart(job_start *OGRT.JobStart) {
 func (fw *JsonFileOutput) PersistJobEnd(job_end *OGRT.JobEnd) {
 }
 
+func (fw *JsonFileOutput) PersistProcessResourceInfo(process_info *OGRT.ProcessResourceInfo) {
+}
+
 func (fw *JsonFileOutput) PersistProcessInfo(process_info *OGRT.ProcessInfo) {
 	filepath := path.Join(fw.path, process_info.GetJobId())
 	var job_info OGRT.JobInfo

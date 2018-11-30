@@ -20,13 +20,13 @@ OGRT_INTERNAL
 char *ogrt_normalize_path(const char *path) {
   char *normalized_path = malloc(PATH_MAX);
   if (normalized_path == NULL) {
-    fprintf(stderr, "OGRT: memory allocate failed\n");
+    Log(OGRT_LOG_ERR, "failed  to allocate memory\n");
     return NULL;
   }
   char *ret = realpath(path, normalized_path);
   if(ret == NULL) {
     free(normalized_path);
-    return strdup(path);
+    return NULL;
   }
   return normalized_path;
 }
@@ -43,13 +43,13 @@ char *ogrt_get_binpath(const pid_t pid) {
   char *bin_path;
   bin_path = malloc(PATH_MAX);
   if (bin_path == NULL) {
-    fprintf(stderr, "OGRT: memory allocate failed\n");
+    Log(OGRT_LOG_ERR, "failed  to allocate memory\n");
     return NULL;
   }
 
   ssize_t len = readlink(proc_path, bin_path, PATH_MAX);
   if (len == -1) {
-     perror("lstat");
+     Log(OGRT_LOG_ERR, "failed getting executable path: %s\n", strerror(errno));
      free(bin_path);
      return NULL;
   }
@@ -76,7 +76,15 @@ char *ogrt_get_cmdline(const pid_t pid) {
   }
 
   int fd = open(proc_path, O_RDONLY);
+  if(fd < 0) {
+     Log(OGRT_LOG_ERR, "failed to get cmdline - open(): %s\n", strerror(errno));
+     return NULL;
+  }
   int nbytesread = read(fd, cmdline, PATH_MAX);
+  if(nbytesread < 0) {
+     Log(OGRT_LOG_ERR, "failed to get cmdline - read(): %s\n", strerror(errno));
+     return NULL;
+  }
   char *end = cmdline + nbytesread;
 
   /* cmdline is a string w/ NULLs instead of spaces, so
@@ -96,9 +104,10 @@ char *ogrt_get_cmdline(const pid_t pid) {
  * Does not use environment variables to do the lookup.
  */
 OGRT_INTERNAL
-char *ogrt_get_username(){
+char *ogrt_get_username() {
   struct passwd *pw = getpwuid(geteuid());
   if(pw == NULL) {
+    Log(OGRT_LOG_ERR, "failed to get username: %s\n", strerror(errno));
     return NULL;
   }
   return strdup(pw->pw_name);
@@ -108,12 +117,27 @@ char *ogrt_get_username(){
  * Get the name of the current host.
  */
 OGRT_INTERNAL
-char *ogrt_get_hostname(){
+char *ogrt_get_hostname() {
   char hostname[HOST_NAME_MAX+1];
   int ret = gethostname(hostname, sizeof(hostname));
   if(ret) {
+    Log(OGRT_LOG_ERR, "failed to get hostname - gethostname(): %s\n", strerror(errno));
     return NULL;
   }
   return strdup(hostname);
 }
 
+
+/**
+ * Get current working directory
+ */
+OGRT_INTERNAL
+char *ogrt_get_cwd() {
+  char path[PATH_MAX];
+  char *ret = getcwd(path, PATH_MAX);
+  if(ret == NULL) {
+    Log(OGRT_LOG_ERR, "failed to get cwd - getcwd(): %s\n", strerror(errno));
+    return NULL;
+  }
+  return strdup(path);
+}

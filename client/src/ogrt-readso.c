@@ -43,7 +43,7 @@ int read_signature(const void *note, uint8_t *ret_version, char **ret_signature)
  * Process an ELF program header section (located in memory).
  */
 OGRT_INTERNAL
-int handle_program_header(struct dl_phdr_info *info, __attribute__((unused))size_t size, void *data)
+int handle_program_header(struct dl_phdr_info *info, __attribute__((unused)) size_t size, void *data)
 {
   char *so_name = ogrt_normalize_path(info->dlpi_name);
 
