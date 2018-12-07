@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 	"log"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/georg-rath/ogrt/src/protocol"
@@ -25,17 +27,18 @@ both messages). After completion the ProcessTuple is added to a JobData struct, 
 
 On completion of ProcessTuple:
 1. Check if JobData is cached
-2. If not pull it in. TODO: think about if this needs to be protected by a lock
+2. If not pull it in.
 3. Add Tuple to JobData
--> there is a flushing goroutine, which flushes out the cache to the database every n seconds, we need to mark the JobData dirty on update and load
+-> there is a flushing goroutine, which flushes the cache to the database every n seconds, we need to mark the JobData dirty on update and load
+-> there is a purging goroutine, which purges the cache of aged out items every n seconds
 
 */
 type PgSqlAggregatorOutput struct {
 	OGWriter
 }
 
-var jobCache map[string]*JobData
-var uuidCache map[string]*ProcessTuple
+var jobCache *JobDataCache
+var tupleCache *TupleCache
 
 var db *sql.DB
 var loadJobDataSql string = `SELECT "ID", "JobID", "User", "FirstCommand", "LastCommand", "MaxRSS", "MaxRSSCmdline", "RuUtime", "RuStime", "RuMinflt", "RuMajflt", "RuInblock", "RuOublock", "RuNvcsw", "RuNivcsw", "Modules", "SharedObjects" FROM "Jobs" WHERE "JobID" = $1`
@@ -89,6 +92,7 @@ type JobData struct {
 	SharedObjects []*OGRT.SharedObject
 
 	dirty bool
+	mu    *sync.Mutex
 }
 
 func LoadJobData(pi *OGRT.ProcessInfo) (jd *JobData) {
@@ -101,7 +105,10 @@ func LoadJobData(pi *OGRT.ProcessInfo) (jd *JobData) {
 	// we take the job that fits based on start time, as this is likely to be "the right thing".
 	var modules, sharedObjects string
 	for rows.Next() {
-		rjd := &JobData{}
+		rjd := &JobData{
+			dirty: false,
+			mu:    &sync.Mutex{},
+		}
 		if err := rows.Scan(&rjd.RowId, &rjd.JobId, &rjd.User, &rjd.FirstCommand, &rjd.LastCommand, &rjd.MaxRSS, &rjd.MaxRSSCmdline, &rjd.RuUtime, &rjd.RuStime, &rjd.RuMinflt, &rjd.RuMajflt, &rjd.RuInblock, &rjd.RuOublock, &rjd.RuNvcsw, &rjd.RuNivcsw, &modules, &sharedObjects); err != nil {
 			log.Fatal(err)
 		}
@@ -122,6 +129,7 @@ func LoadJobData(pi *OGRT.ProcessInfo) (jd *JobData) {
 			Modules:       pi.LoadedModules,
 			SharedObjects: pi.SharedObjects,
 			dirty:         true,
+			mu:            &sync.Mutex{},
 		}
 	}
 
@@ -171,6 +179,8 @@ func convertTime(raw int64) time.Time {
 }
 
 func (jd *JobData) AddTuple(pt *ProcessTuple) {
+	jd.mu.Lock()
+	defer jd.mu.Unlock()
 	if !pt.Complete() {
 		return
 	}
@@ -216,10 +226,15 @@ nextSo:
 		}
 		jd.SharedObjects = append(jd.SharedObjects, newSo)
 	}
+
+	jd.dirty = true
 	return
 }
 
 func (jd *JobData) Save() {
+	jd.mu.Lock()
+	defer jd.mu.Unlock()
+
 	// marshal shared objects to JSON
 	// needs a bit of a workaround, cause we can't directly marshal an array of protobufs
 	m := &jsonpb.Marshaler{}
@@ -259,6 +274,14 @@ func (jd *JobData) Save() {
 	if _, err := updateJobDataStmt.Exec(jd.RowId, jd.JobId, jd.User, jd.FirstCommand, jd.LastCommand, jd.MaxRSS, jd.MaxRSSCmdline, jd.RuUtime, jd.RuStime, jd.RuMinflt, jd.RuMajflt, jd.RuInblock, jd.RuOublock, jd.RuNvcsw, jd.RuNivcsw, soBuilder.String(), moduleBuilder.String()); err != nil {
 		log.Println("failed inserting job data", err)
 	}
+
+	jd.dirty = false
+}
+
+func (jd *JobData) Dirty() (dirty bool) {
+	jd.mu.Lock()
+	defer jd.mu.Unlock()
+	return jd.dirty
 }
 
 type ProcessTuple struct {
@@ -308,7 +331,6 @@ func (fw *PgSqlAggregatorOutput) Open(params string) {
 	if _, err := db.Exec(createTable); err != nil {
 		log.Fatal("failed creating table", err)
 	}
-
 	if loadJobDataStmt, err = db.Prepare(loadJobDataSql); err != nil {
 		log.Fatal("failed to prepare query", err)
 	}
@@ -319,8 +341,8 @@ func (fw *PgSqlAggregatorOutput) Open(params string) {
 		log.Fatal("failed to prepare query", err)
 	}
 
-	jobCache = make(map[string]*JobData)
-	uuidCache = make(map[string]*ProcessTuple)
+	jobCache = NewJobDataCache()
+	tupleCache = NewTupleCache()
 }
 
 func (fw *PgSqlAggregatorOutput) PersistJobStart(job_start *OGRT.JobStart) {
@@ -331,57 +353,161 @@ func (fw *PgSqlAggregatorOutput) PersistJobEnd(job_end *OGRT.JobEnd) {
 
 func (fw *PgSqlAggregatorOutput) PersistProcessResourceInfo(pri *OGRT.ProcessResourceInfo) {
 	uuid := hex.EncodeToString(pri.Uuid)
-
-	if _, found := uuidCache[uuid]; !found {
-		pt := &ProcessTuple{
-			ProcessResourceInfo: pri,
-			LastUpdate:          time.Now(),
-		}
-
-		uuidCache[uuid] = pt
-		return
+	pt := &ProcessTuple{
+		ProcessResourceInfo: pri,
+		LastUpdate:          time.Now(),
 	}
-
-	// processinfo arrived already
-	pt := uuidCache[uuid]
-	pt.ProcessResourceInfo = pri
-	//TODO: until we got the flusher right, the following statement will crash
-	jd := jobCache[pt.ProcessInfo.JobId]
-	jd.AddTuple(pt)
-	delete(uuidCache, uuid)
-
-	//TODO: move this to flusher goroutine
-	jd.Save()
-	delete(jobCache, pt.ProcessInfo.JobId)
+	if pt, loaded := tupleCache.LoadOrStore(uuid, pt); loaded {
+		pt.ProcessResourceInfo = pri
+		jobCache.GetOrLoad(pt.ProcessInfo).AddTuple(pt)
+		tupleCache.Delete(uuid)
+	}
 }
 
 func (fw *PgSqlAggregatorOutput) PersistProcessInfo(pi *OGRT.ProcessInfo) {
 	uuid := hex.EncodeToString(pi.Uuid)
-	if _, found := uuidCache[uuid]; !found {
-		pt := &ProcessTuple{
-			ProcessInfo: pi,
-			LastUpdate:  time.Now(),
-		}
-
-		if _, found := jobCache[pi.JobId]; !found {
-			jd := LoadJobData(pi)
-			jobCache[pi.JobId] = jd
-		}
-		uuidCache[uuid] = pt
-		return
+	pt := &ProcessTuple{
+		ProcessInfo: pi,
+		LastUpdate:  time.Now(),
 	}
-
-	// resourceinfo arrived already
-	pt := uuidCache[uuid]
-	pt.ProcessInfo = pi
-	if _, found := jobCache[pi.JobId]; !found {
-		jd := LoadJobData(pi)
-		jobCache[pi.JobId] = jd
+	if tuple, loaded := tupleCache.LoadOrStore(uuid, pt); !loaded {
+		jobCache.GetOrLoad(pi)
+	} else {
+		// resourceinfo arrived already
+		jobCache.GetOrLoad(pi).AddTuple(tuple)
+		tupleCache.Delete(uuid)
 	}
-	jobCache[pi.JobId].AddTuple(pt)
-	delete(uuidCache, uuid)
 }
 
 func (fw *PgSqlAggregatorOutput) Close() {
 	db.Close()
+	jobCache.Close()
+}
+
+type JobDataCache struct {
+	cache map[string]*JobData
+	mu    *sync.RWMutex
+
+	stop    chan struct{}
+	stopped chan struct{}
+}
+
+func NewJobDataCache() (jdc *JobDataCache) {
+	jdc = &JobDataCache{
+		cache: make(map[string]*JobData),
+		mu:    &sync.RWMutex{},
+
+		stop:    make(chan struct{}),
+		stopped: make(chan struct{}),
+	}
+
+	go func() {
+		flushTicker := time.NewTicker(2 * time.Second)
+		defer flushTicker.Stop()
+		purgeTicker := time.NewTicker(5 * time.Second)
+		defer purgeTicker.Stop()
+
+		flushFn := func() {
+			log.Printf("%d elements in tupleCache\n", tupleCache.Size())
+			log.Printf("%d elements in jobCache\n", jobCache.Size())
+			jdc.mu.RLock()
+			flushed := 0
+			for _, v := range jdc.cache {
+				if v.Dirty() {
+					v.Save()
+					flushed++
+				}
+			}
+			jdc.mu.RUnlock()
+			log.Printf("flushed %d dirty elements from jobCache\n", flushed)
+		}
+		for {
+			select {
+			case <-jdc.stop:
+				flushFn()
+				jdc.stopped <- struct{}{}
+				break
+			case <-flushTicker.C:
+				flushFn()
+			case <-purgeTicker.C:
+				jdc.mu.Lock()
+				purged := 0
+				now := time.Now()
+				for _, v := range jdc.cache {
+					if !v.Dirty() {
+						age := now.Sub(v.LastCommand)
+						if age > 10*time.Second {
+							delete(jdc.cache, v.JobId)
+							purged++
+						}
+					}
+				}
+				log.Printf("purged %d elements from jobCache\n", purged)
+				jdc.mu.Unlock()
+			}
+		}
+	}()
+
+	return
+}
+
+func (jdc *JobDataCache) GetOrLoad(pi *OGRT.ProcessInfo) (jd *JobData) {
+	log.Println("get")
+	jdc.mu.RLock()
+	value, found := jdc.cache[pi.JobId]
+	// we did not find the entry, lets fetch it from the db
+	if !found {
+		// drop read lock and get write lock
+		jdc.mu.RUnlock()
+		jdc.mu.Lock()
+		defer jdc.mu.Unlock()
+		// check again, there might have been a concurrent Get
+		if value, found := jdc.cache[pi.JobId]; found {
+			return value
+		}
+		// there wasn't - fetch from db
+		jd = LoadJobData(pi)
+		jdc.cache[pi.JobId] = jd
+		return jd
+	}
+	jdc.mu.RUnlock()
+	return value
+}
+
+func (jdc *JobDataCache) Size() uint {
+	return uint(len(jdc.cache))
+}
+
+func (jdc *JobDataCache) Close() {
+	jdc.stop <- struct{}{}
+	<-jdc.stopped
+}
+
+type TupleCache struct {
+	cache *sync.Map
+	size  uint64
+}
+
+func NewTupleCache() (tc *TupleCache) {
+	return &TupleCache{
+		cache: &sync.Map{},
+	}
+}
+
+func (tc *TupleCache) LoadOrStore(key string, value *ProcessTuple) (actual *ProcessTuple, loaded bool) {
+	actualUntyped, loaded := tc.cache.LoadOrStore(key, value)
+	actual = actualUntyped.(*ProcessTuple)
+	if !loaded {
+		atomic.AddUint64(&tc.size, 1)
+	}
+	return
+}
+
+func (tc *TupleCache) Delete(key string) {
+	tc.cache.Delete(key)
+	atomic.AddUint64(&tc.size, ^uint64(0))
+}
+
+func (tc *TupleCache) Size() uint64 {
+	return atomic.LoadUint64(&tc.size)
 }
