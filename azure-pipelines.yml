@@ -18,15 +18,19 @@ jobs:
     matrix:
       Builder:
         containerName: ogrt-builder
+        prepareCmd: "echo 'skipping preparation...'"
         vendorCmd: "echo 'skipping vendoring...'"
       Debian-stable:
         containerName: debian-stable
+        prepareCmd: "apt-get update && apt-get install -y build-essential pkg-config python wget"
         vendorCmd: "./vendorize"
       CentOS-6:
-        containerName: centos-7
+        containerName: centos-6
+        prepareCmd: "yum groupinstall -y 'Development Tools' && yum install -y wget"
         vendorCmd: "./vendorize"
       CentOS-7:
-        containerName: centos-6
+        containerName: centos-7
+        prepareCmd: "yum groupinstall -y 'Development Tools' && yum install -y wget"
         vendorCmd: "./vendorize"
   pool:
     vmImage: 'Ubuntu-16.04'
@@ -34,6 +38,7 @@ jobs:
   steps:
   - script: |
       echo "running in $(containerName)"
+      $(prepareCmd)
       $(vendorCmd)
       ./configure
       make
