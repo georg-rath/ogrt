@@ -48,7 +48,8 @@ var insertJobDataSql string = `
 	INSERT INTO "Jobs"
 		("ID", "JobID", "User", "FirstCommand", "LastCommand", "MaxRSS", "MaxRSSCmdline", "RuUtime", "RuStime", "RuMinflt", "RuMajflt", "RuInblock", "RuOublock", "RuNvcsw", "RuNivcsw", "SharedObjects", "Modules")
 		VALUES
-		(DEFAULT, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16);`
+		(DEFAULT, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+  RETURNING "ID";`
 var updateJobDataSql string = `
 	UPDATE "Jobs"
 	SET
@@ -266,15 +267,17 @@ func (jd *JobData) Save() {
 	moduleBuilder.WriteString("]")
 
 	if jd.RowId == 0 {
-		if _, err := insertJobDataStmt.Exec(jd.JobId, jd.User, jd.FirstCommand, jd.LastCommand, jd.MaxRSS, jd.MaxRSSCmdline, jd.RuUtime, jd.RuStime, jd.RuMinflt, jd.RuMajflt, jd.RuInblock, jd.RuOublock, jd.RuNvcsw, jd.RuNivcsw, soBuilder.String(), moduleBuilder.String()); err != nil {
+		if err := insertJobDataStmt.QueryRow(jd.JobId, jd.User, jd.FirstCommand, jd.LastCommand, jd.MaxRSS, jd.MaxRSSCmdline, jd.RuUtime, jd.RuStime, jd.RuMinflt, jd.RuMajflt, jd.RuInblock, jd.RuOublock, jd.RuNvcsw, jd.RuNivcsw, soBuilder.String(), moduleBuilder.String()).Scan(&jd.RowId); err != nil {
 			log.Println("failed inserting job data", err)
+			return
 		}
+		jd.dirty = false
 		return
 	}
 	if _, err := updateJobDataStmt.Exec(jd.RowId, jd.JobId, jd.User, jd.FirstCommand, jd.LastCommand, jd.MaxRSS, jd.MaxRSSCmdline, jd.RuUtime, jd.RuStime, jd.RuMinflt, jd.RuMajflt, jd.RuInblock, jd.RuOublock, jd.RuNvcsw, jd.RuNivcsw, soBuilder.String(), moduleBuilder.String()); err != nil {
 		log.Println("failed inserting job data", err)
+		return
 	}
-
 	jd.dirty = false
 }
 
@@ -358,6 +361,7 @@ func (fw *PgSqlAggregatorOutput) PersistProcessResourceInfo(pri *OGRT.ProcessRes
 		LastUpdate:          time.Now(),
 	}
 	if pt, loaded := tupleCache.LoadOrStore(uuid, pt); loaded {
+		// processinfo was already in cache
 		pt.ProcessResourceInfo = pri
 		jobCache.GetOrLoad(pt.ProcessInfo).AddTuple(pt)
 		tupleCache.Delete(uuid)
@@ -380,10 +384,15 @@ func (fw *PgSqlAggregatorOutput) PersistProcessInfo(pi *OGRT.ProcessInfo) {
 }
 
 func (fw *PgSqlAggregatorOutput) Close() {
-	db.Close()
 	jobCache.Close()
+	db.Close()
 }
 
+// JobDataCache caches aggregated job data.
+// Assumption is that this cache is read-mostly, which is why
+// the map that stores the data is protected with a RW lock, with
+// each element in the map having a separate mutex. This should make
+// it so that we incur locking penalty only in the insert case.
 type JobDataCache struct {
 	cache map[string]*JobData
 	mu    *sync.RWMutex
@@ -402,9 +411,9 @@ func NewJobDataCache() (jdc *JobDataCache) {
 	}
 
 	go func() {
-		flushTicker := time.NewTicker(2 * time.Second)
+		flushTicker := time.NewTicker(5 * time.Second)
 		defer flushTicker.Stop()
-		purgeTicker := time.NewTicker(5 * time.Second)
+		purgeTicker := time.NewTicker(10 * time.Second)
 		defer purgeTicker.Stop()
 
 		flushFn := func() {
@@ -424,6 +433,7 @@ func NewJobDataCache() (jdc *JobDataCache) {
 		for {
 			select {
 			case <-jdc.stop:
+				log.Println("flushing aggregator cache...")
 				flushFn()
 				jdc.stopped <- struct{}{}
 				break
@@ -483,6 +493,10 @@ func (jdc *JobDataCache) Close() {
 	<-jdc.stopped
 }
 
+// TupleCache caches incomplete tuples. Tuples get evicted once complete.
+// We expect high insert rate, which is why this cache was implemented using
+// a sync.Map, as we expect it to perform better than a lock protected map
+// for this use case.
 type TupleCache struct {
 	cache *sync.Map
 	size  uint64

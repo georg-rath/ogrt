@@ -2,6 +2,12 @@ syntax = "proto3";
 
 package OGRT;
 
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+
 enum MessageType {
   JobStartMsg = 0;
   JobEndMsg = 11;

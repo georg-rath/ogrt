@@ -4,6 +4,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
 	"github.com/rcrowley/go-metrics"
 )
@@ -11,6 +12,7 @@ import (
 func StartWebAPI(address string) {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
+	pprof.Register(r)
 	r.Use(gin.Recovery())
 	r.GET("/metrics", func(c *gin.Context) {
 		outputs := outputMetrics(metrics.DefaultRegistry, time.Millisecond)

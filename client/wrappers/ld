@@ -9,7 +9,7 @@
 ###
 
 function is_debug() {
-  [[ $OGRT_DEBUG == 1 || $OGRT_DEBUG == "yes" || $OGRT_DEBUG == "true" ]]
+  [[ $OGRT_DEBUG == 1 || $OGRT_DEBUG == "yes" || $OGRT_DEBUG == "true" || $OGRT_DBG == 1 || $OGRT_DBG == true ]]
 }
 
 unwrapped=false
@@ -43,4 +43,4 @@ fi
 exec "$unwrapped" "${arguments[@]}" "$@"
 
 # delete signature file if we are not in debug mode
-[[ -r $sigfile ]] && !is_debug && rm $sigfile
+[[ -r $sigfile ]] && ! is_debug && rm $sigfile
