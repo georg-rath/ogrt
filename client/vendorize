@@ -70,7 +70,6 @@ function build_everything() {
   echo -e "\tlibelf..."
   {
     cd libelf*
-    echo "yo" | grep no
     ./configure --with-pic --enable-static --prefix="$installdir"
     make install -j1 # -j1 cause the Makefile is racy
     cd ..
