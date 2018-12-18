@@ -78,7 +78,7 @@ function build_everything() {
   echo -e "\tprotobuf..."
   {
     cd protobuf-3*
-    ./configure --with-pic --enable-static --prefix="$installdir"
+    ./configure --with-pic --enable-static --disable-shared --without-csharp --without-java --without-python --without-javanano --without-objectivec --without-ruby --without-js --without-php --prefix="$installdir"
     make install -j $numprocs
     cd ..
   } &> /dev/null
