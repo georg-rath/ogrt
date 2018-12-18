@@ -1,6 +1,10 @@
 trigger:
 - azure-ci
 
+resources:
+containers:
+- container: ogrt-builder
+  image: ograth/ogrt-builder:1.0.0
 
 jobs:
 - job: Build
@@ -12,11 +16,8 @@ jobs:
         CONFIG_OPTIONS: 'Config2'
   pool:
     vmImage: 'Ubuntu-16.04'
+  container: ogrt-builder
   steps:
-  - script: |
-      ./vendorize
-    displayName: 'vendorize'
-    workingDirectory: 'client'
   - script: |
       echo $(CONFIG_OPTIONS)
       ./configure
