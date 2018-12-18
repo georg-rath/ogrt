@@ -1,21 +1,30 @@
 trigger:
 - azure-ci
 
-strategy:
-  matrix:
-    Config1:
-      CONFIG_OPTIONS: 'Config1'
-    Config2:
-      CONFIG_OPTIONS: 'Config2'
 
-pool:
-  vmImage: 'Ubuntu-16.04'
+jobs:
+- job: Vendorize
+  pool:
+    vmImage: 'Ubuntu-16.04'
+  steps:
+  - script: |
+      ./vendorize
+    displayName: 'vendorize'
+    workingDirectory: 'client'
 
-
-steps:
-- script: |
-    echo $(CONFIG_OPTIONS)
-    ./vendorize
-  displayName: 'vendorize'
-  workingDirectory: 'client'
-
+- job: Build
+  strategy:
+    matrix:
+      Config1:
+        CONFIG_OPTIONS: 'Config1'
+      Config2:
+        CONFIG_OPTIONS: 'Config2'
+  pool:
+    vmImage: 'Ubuntu-16.04'
+  steps:
+  - script: |
+      echo $(CONFIG_OPTIONS)
+      ./configure
+      ./make
+    displayName: 'build'
+    workingDirectory: 'client'
