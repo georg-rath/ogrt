@@ -3,15 +3,6 @@ trigger:
 
 
 jobs:
-- job: Vendorize
-  pool:
-    vmImage: 'Ubuntu-16.04'
-  steps:
-  - script: |
-      ./vendorize
-    displayName: 'vendorize'
-    workingDirectory: 'client'
-
 - job: Build
   strategy:
     matrix:
@@ -22,6 +13,10 @@ jobs:
   pool:
     vmImage: 'Ubuntu-16.04'
   steps:
+  - script: |
+      ./vendorize
+    displayName: 'vendorize'
+    workingDirectory: 'client'
   - script: |
       echo $(CONFIG_OPTIONS)
       ./configure
