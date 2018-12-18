@@ -4,8 +4,18 @@ trigger:
 pool:
   vmImage: 'Ubuntu-16.04'
 
-steps:
-- script: |
-    ./vendorize
-  displayName: 'vendorize'
-  workingDirectory: 'client'
+jobs:
+- job: Build
+  strategy:
+    matrix:
+      Config1:
+        CONFIG_OPTIONS: 'Config1'
+      Config2:
+        CONFIG_OPTIONS: 'Config2'
+  steps:
+  - script: |
+      echo $(CONFIG_OPTIONS)
+      ./vendorize
+    displayName: 'vendorize'
+    workingDirectory: 'client'
+
