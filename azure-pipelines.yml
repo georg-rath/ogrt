@@ -34,7 +34,7 @@ jobs:
   steps:
   - script: |
       echo "running in $(containerName)"
-      $[ variables['vendorCmd'] ]
+      $(vendorCmd)
       ./configure
       make
     displayName: 'build'
