@@ -8,9 +8,8 @@
 # as the first parameter.
 
 # hard mode
-set -e -o pipefail
+set -eE -o pipefail
 
-set -x
 function is_available() {
   command -v $1 >/dev/null 2>&1 || { echo >&2 "I require $1 but it's not installed. Aborting."; exit 1; }
 }
@@ -71,8 +70,9 @@ function build_everything() {
   echo -e "\tlibelf..."
   {
     cd libelf*
+    echo "yo" | grep no
     ./configure --with-pic --enable-static --prefix="$installdir"
-    make install -j $numprocs
+    make install -j1 # -j1 cause the Makefile is racy
     cd ..
   } &> /dev/null
 
@@ -112,4 +112,3 @@ download_dependencies
 extract_dependencies
 init_paths
 build_everything ${1:-$(getconf _NPROCESSORS_ONLN)}
-

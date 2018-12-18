@@ -1,0 +1,11 @@
+trigger:
+- azure-ci
+
+pool:
+  vmImage: 'Ubuntu-16.04'
+
+steps:
+- script: |
+    ./vendorize
+  displayName: 'vendorize'
+  workingDirectory: 'client'
