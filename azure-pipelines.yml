@@ -5,21 +5,36 @@ resources:
   containers:
   - container: ogrt-builder
     image: ograth/ogrt-builder:1.0.0
+  - container: debian-stable
+    image: debian:stable
+  - container: centos-7
+    image: centos:7
+  - container: centos-6
+    image: centos:6
 
 jobs:
 - job: Build
   strategy:
     matrix:
-      Config1:
-        CONFIG_OPTIONS: 'Config1'
-      Config2:
-        CONFIG_OPTIONS: 'Config2'
+      Builder:
+        containerName: ogrt-builder
+        vendorCmd: "echo 'skipping vendoring...'"
+      Debian-stable:
+        containerName: debian-stable
+        vendorCmd: "./vendorize"
+      CentOS-6:
+        containerName: centos-7
+        vendorCmd: "./vendorize"
+      CentOS-7:
+        containerName: centos-6
+        vendorCmd: "./vendorize"
   pool:
     vmImage: 'Ubuntu-16.04'
-  container: ogrt-builder
+  container: $[ variables['containerName'] ]
   steps:
   - script: |
-      echo $(CONFIG_OPTIONS)
+      echo "running in $(containerName)"
+      $[ variables['vendorCmd'] ]
       ./configure
       make
     displayName: 'build'
