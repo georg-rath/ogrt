@@ -16,3 +16,4 @@ protoc-c -I=. -I=/go/src -I=/go/src/github.com/gogo/protobuf/protobuf  --c_out c
 mv client/src/protocol/* client/src/
 rmdir  client/src/protocol
 sed -i 's|#include "protocol/ogrt.pb-c.h"|#include "ogrt.pb-c.h"|' client/src/ogrt.pb-c.c
+sed -i '/#include "github.com\/gogo\/protobuf\/gogoproto\/gogo.pb-c.h"/d' client/src/ogrt.pb-c.h
