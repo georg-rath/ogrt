@@ -2,9 +2,9 @@ trigger:
 - azure-ci
 
 resources:
-containers:
-- container: ogrt-builder
-  image: ograth/ogrt-builder:1.0.0
+  containers:
+  - container: ogrt-builder
+    image: ograth/ogrt-builder:1.0.0
 
 jobs:
 - job: Build
