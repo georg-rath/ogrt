@@ -6,11 +6,11 @@ resources:
   - container: ogrt-builder
     image: ograth/ogrt-builder:1.0.0
   - container: debian-stable
-    image: debian:stable
+    image: ograth/debian:stable-essential
   - container: centos-7
-    image: centos:7
+    image: ograth/centos:7-devtools
   - container: centos-6
-    image: centos:6
+    image: ograth/centos:6-devtools
 
 jobs:
 - job: Build
