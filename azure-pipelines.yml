@@ -11,6 +11,8 @@ resources:
     image: ograth/centos:7-devtools
   - container: centos-6
     image: ograth/centos:6-devtools
+  - container: leap-42.3
+    image: ograth/leap:42.3-devtools
 
 jobs:
 - job: Build
@@ -22,8 +24,8 @@ jobs:
       Debian-stable:
         containerName: debian-stable
         vendorCmd: "./vendorize"
-      CentOS-6:
-        containerName: centos-6
+      SuSE-Leap-42.3:
+        containerName: leap-42.3
         vendorCmd: "./vendorize"
       CentOS-7:
         containerName: centos-7
