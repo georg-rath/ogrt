@@ -8,9 +8,22 @@
 # as the first parameter.
 
 # hard mode
-set -e -o pipefail
+set -eE -o pipefail
 
-set -x
+function main() {
+  is_available "gcc"
+  is_available "g++"
+  is_available "pkg-config"
+  is_available "python"
+  is_available "wget"
+
+  cleanup_and_mkdir
+  download_dependencies
+  extract_dependencies
+  init_paths ${2}
+  build_everything ${1:-$(getconf _NPROCESSORS_ONLN)}
+}
+
 function is_available() {
   command -v $1 >/dev/null 2>&1 || { echo >&2 "I require $1 but it's not installed. Aborting."; exit 1; }
 }
@@ -53,7 +66,7 @@ function extract_dependencies() {
 }
 
 function init_paths() {
-  readonly installdir="$(pwd)/vendor/install"
+  readonly installdir="${1:-$(pwd)/vendor/install}"
   export PATH="$(pwd)/vendor/install/bin:$PATH"
   export CPATH="$(pwd)/vendor/install/include:$CPATH"
   export LIBRARY_PATH="$(pwd)/vendor/install/lib:$LIBRARY_PATH"
@@ -72,14 +85,14 @@ function build_everything() {
   {
     cd libelf*
     ./configure --with-pic --enable-static --prefix="$installdir"
-    make install -j $numprocs
+    make install -j1 # -j1 cause the Makefile is racy
     cd ..
   } &> /dev/null
 
   echo -e "\tprotobuf..."
   {
     cd protobuf-3*
-    ./configure --with-pic --enable-static --prefix="$installdir"
+    ./configure --with-pic --enable-static --disable-shared --without-csharp --without-java --without-python --without-javanano --without-objectivec --without-ruby --without-js --without-php --prefix="$installdir"
     make install -j $numprocs
     cd ..
   } &> /dev/null
@@ -95,21 +108,10 @@ function build_everything() {
   echo -e "\tutil-linux..."
   {
     cd util-linux*
-    ./configure --disable-all-programs --enable-libuuid --with-pic --enable-static --without-python --with-bashcompletiondir="$installdir" --prefix="$installdir"
+    ./configure --disable-all-programs --enable-libuuid --with-pic --enable-static --without-python --prefix="$installdir"
     make install -j $numprocs
     cd ..
   } &> /dev/null
 }
 
-is_available "gcc"
-is_available "g++"
-is_available "pkg-config"
-is_available "python"
-is_available "wget"
-
-cleanup_and_mkdir
-download_dependencies
-extract_dependencies
-init_paths
-build_everything ${1:-$(getconf _NPROCESSORS_ONLN)}
-
+main $@
