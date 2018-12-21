@@ -10,7 +10,7 @@ is_available "protoc"
 is_available "protoc-c"
 is_available "protoc-gen-gogofaster"
 
-protoc -I=. -I=/go/src -I=/go/src/github.com/gogo/protobuf/protobuf --gogofaster_out server/src protocol/ogrt.proto
+protoc -I=. -I=/go/src -I=/go/src/github.com/gogo/protobuf/protobuf --gogofaster_out server/ protocol/ogrt.proto
 protoc-c -I=. -I=/go/src -I=/go/src/github.com/gogo/protobuf/protobuf  --c_out client/src/ protocol/ogrt.proto
 
 # copy C source into right location

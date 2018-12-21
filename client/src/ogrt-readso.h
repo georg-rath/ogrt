@@ -33,7 +33,7 @@ typedef struct ogrt_note ogrt_note;
 struct so_infos {
   int32_t size;
   int32_t index;
-  OGRT__SharedObject shared_objects[1];
+  Msg__SharedObject shared_objects[1];
 };
 typedef struct so_infos so_infos;
 

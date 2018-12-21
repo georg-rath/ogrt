@@ -213,8 +213,8 @@ OGRT_INTERNAL
 bool ogrt_send_resourceinfo() {
   Log(OGRT_LOG_DBG, "sending resource info...\n");
 
-  OGRT__ProcessResourceInfo msg;
-  ogrt__process_resource_info__init(&msg);
+  Msg__ProcessEnd msg;
+  msg__process_end__init(&msg);
 
   struct timespec ts;
   clock_gettime(CLOCK_REALTIME, &ts);
@@ -252,12 +252,12 @@ bool ogrt_send_resourceinfo() {
   }
 
 
-  size_t msg_len = ogrt__process_resource_info__get_packed_size(&msg);
+  size_t msg_len = msg__process_end__get_packed_size(&msg);
   void *msg_serialized = NULL;
   char *msg_buffer = NULL;
-  int send_length = ogrt_prepare_sendbuffer(OGRT__MESSAGE_TYPE__ProcessResourceMsg, msg_len, &msg_buffer, &msg_serialized);
+  int send_length = ogrt_prepare_sendbuffer(MSG__MESSAGE_TYPE__ProcessEndMsg, msg_len, &msg_buffer, &msg_serialized);
 
-  ogrt__process_resource_info__pack(&msg, msg_serialized);
+  msg__process_end__pack(&msg, msg_serialized);
   send(__daemon_socket, msg_buffer, send_length, 0);
 
   free(msg_buffer);
@@ -270,11 +270,11 @@ bool ogrt_send_processinfo() {
     // it is kind of dirty. the currently running binary is not an so.
 
     so_infos *so_infos = ogrt_get_loaded_so();
-    OGRT__SharedObject *shared_object_excl_blank = &(so_infos->shared_objects[2]);
+    Msg__SharedObject *shared_object_excl_blank = &(so_infos->shared_objects[2]);
 
     //fprintf(stderr, "OGRT: Listing shared objects:\n");
 
-    OGRT__SharedObject *shared_object_ptr[so_infos->size];
+    Msg__SharedObject *shared_object_ptr[so_infos->size];
     //for(int i = 0; i < *so_info_size; i++) {
     //  ogrt_log_debug("[D] shared object path=%s, signature=%s\n", shared_object[i].path, shared_object[i].signature);
     //  fprintf(stderr, "OGRT:\tshared object path=%s, signature=%s\n", shared_object[i].path, shared_object[i].signature);
@@ -287,12 +287,12 @@ bool ogrt_send_processinfo() {
     struct timespec ts;
     clock_gettime(CLOCK_REALTIME, &ts);
 
-    OGRT__ProcessInfo msg;
-    ogrt__process_info__init(&msg);
+    Msg__ProcessStart msg;
+    msg__process_start__init(&msg);
     msg.binpath = ogrt_get_binpath(__pid);
 
 #if OGRT_MSG_SEND_LOADEDMODULES == 1
-    OGRT__Module **loaded_modules = NULL;
+    Msg__Module **loaded_modules = NULL;
     char *module_env = getenv("LOADEDMODULES");
     msg.n_loaded_modules = 0;
     if(module_env) {
@@ -307,7 +307,7 @@ bool ogrt_send_processinfo() {
 
       if(module_count > 0) {
         /* allocate space for modules */
-        loaded_modules = malloc(sizeof(OGRT__Module) * module_count);
+        loaded_modules = malloc(sizeof(Msg__Module) * module_count);
 
         /* fill the protobuf */
         char *module_string = strdup(module_env);
@@ -315,8 +315,8 @@ bool ogrt_send_processinfo() {
         for (module_count=0; module_token; module_count++) {
           Log(OGRT_LOG_DBG, "[D] token iteration %d\n", module_count);
 
-          loaded_modules[module_count] = malloc(sizeof(OGRT__Module));
-          ogrt__module__init(loaded_modules[module_count]);
+          loaded_modules[module_count] = malloc(sizeof(Msg__Module));
+          msg__module__init(loaded_modules[module_count]);
           loaded_modules[module_count]->name = strdup(module_token);
 
           Log(OGRT_LOG_DBG, "[D] %s module detected\n", loaded_modules[module_count]->name);
@@ -394,12 +394,12 @@ bool ogrt_send_processinfo() {
     msg.uuid.data = __uuid;
     msg.uuid.len= 16;
 
-    size_t msg_len = ogrt__process_info__get_packed_size(&msg);
+    size_t msg_len = msg__process_start__get_packed_size(&msg);
     void *msg_serialized = NULL;
     char *msg_buffer = NULL;
-    int send_length = ogrt_prepare_sendbuffer(OGRT__MESSAGE_TYPE__ProcessInfoMsg, msg_len, &msg_buffer, &msg_serialized);
+    int send_length = ogrt_prepare_sendbuffer(MSG__MESSAGE_TYPE__ProcessStartMsg, msg_len, &msg_buffer, &msg_serialized);
 
-    ogrt__process_info__pack(&msg, msg_serialized);
+    msg__process_start__pack(&msg, msg_serialized);
     send(__daemon_socket, msg_buffer, send_length, 0);
 
     /* free stuff */

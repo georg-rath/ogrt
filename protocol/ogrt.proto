@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package OGRT;
+package msg;
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
@@ -9,23 +9,9 @@ option (gogoproto.unmarshaler_all) = true;
 option (gogoproto.sizer_all) = true;
 
 enum MessageType {
-  JobStartMsg = 0;
-  JobEndMsg = 11;
-  ProcessInfoMsg = 12;
-  ProcessResourceMsg = 16;
-  SharedObjectMsg = 13;
-  ForkMsg = 14;
-  ExecveMsg = 15;
-}
-
-message JobStart {
-  string job_id = 100;
-  int64 start_time = 101;
-}
-
-message JobEnd {
-  string job_id = 200;
-  int64 end_time = 201;
+  UnknownMsg = 0;
+  ProcessStartMsg = 12;
+  ProcessEndMsg = 16;
 }
 
 message SharedObject {
@@ -38,7 +24,7 @@ message Module {
 }
 
 /* sent at start of process */
-message ProcessInfo {
+message ProcessStart {
   bytes uuid = 299;
   string binpath = 300;
   int32 pid = 301;
@@ -57,7 +43,7 @@ message ProcessInfo {
 }
 
 /* sent at end of process */
-message ProcessResourceInfo {
+message ProcessEnd {
   bytes uuid = 99;
   int64 time = 104;
 
@@ -71,9 +57,4 @@ message ProcessResourceInfo {
   int64 ru_oublock = 111;  /* block output operations */
   int64 ru_nvcsw = 112;    /* voluntary context switches */
   int64 ru_nivcsw = 113;   /* involuntary context switches */
-}
-
-message JobInfo {
-  string job_id = 400;
-  repeated ProcessInfo processes = 401;
 }

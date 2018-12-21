@@ -51,8 +51,8 @@ int handle_program_header(struct dl_phdr_info *info, __attribute__((unused)) siz
 
   so_infos *so_infos = data;
 
-  OGRT__SharedObject *shared_object = &(so_infos->shared_objects[so_infos->index]);
-  ogrt__shared_object__init(shared_object);
+  Msg__SharedObject *shared_object = &(so_infos->shared_objects[so_infos->index]);
+  msg__shared_object__init(shared_object);
   shared_object->path = so_name;
 
   Log(OGRT_LOG_DBG, "[D] so_info: size %d, index %d\n", so_infos->size, so_infos->index);
@@ -102,8 +102,8 @@ so_infos *ogrt_get_loaded_so()
   dl_iterate_phdr(count_program_header, (void *)&so_count);
   Log(OGRT_LOG_DBG, "[D] Total so_count: %u\n", so_count);
 
-  Log(OGRT_LOG_DBG, "[D] sizeof(OGRT__SharedObject)=%ld\n", sizeof(OGRT__SharedObject));
-  so_infos *infos = malloc(sizeof(OGRT__SharedObject) * so_count + sizeof(so_infos));
+  Log(OGRT_LOG_DBG, "[D] sizeof(Msg__SharedObject)=%ld\n", sizeof(Msg__SharedObject));
+  so_infos *infos = malloc(sizeof(Msg__SharedObject) * so_count + sizeof(so_infos));
   infos->size = so_count;
   infos->index = 0;
   dl_iterate_phdr(handle_program_header, infos);

@@ -15,77 +15,48 @@ PROTOBUF_C__BEGIN_DECLS
 #endif
 
 
-typedef struct _OGRT__JobStart OGRT__JobStart;
-typedef struct _OGRT__JobEnd OGRT__JobEnd;
-typedef struct _OGRT__SharedObject OGRT__SharedObject;
-typedef struct _OGRT__Module OGRT__Module;
-typedef struct _OGRT__ProcessInfo OGRT__ProcessInfo;
-typedef struct _OGRT__ProcessResourceInfo OGRT__ProcessResourceInfo;
-typedef struct _OGRT__JobInfo OGRT__JobInfo;
+typedef struct _Msg__SharedObject Msg__SharedObject;
+typedef struct _Msg__Module Msg__Module;
+typedef struct _Msg__ProcessStart Msg__ProcessStart;
+typedef struct _Msg__ProcessEnd Msg__ProcessEnd;
 
 
 /* --- enums --- */
 
-typedef enum _OGRT__MessageType {
-  OGRT__MESSAGE_TYPE__JobStartMsg = 0,
-  OGRT__MESSAGE_TYPE__JobEndMsg = 11,
-  OGRT__MESSAGE_TYPE__ProcessInfoMsg = 12,
-  OGRT__MESSAGE_TYPE__ProcessResourceMsg = 16,
-  OGRT__MESSAGE_TYPE__SharedObjectMsg = 13,
-  OGRT__MESSAGE_TYPE__ForkMsg = 14,
-  OGRT__MESSAGE_TYPE__ExecveMsg = 15
-    PROTOBUF_C__FORCE_ENUM_TO_BE_INT_SIZE(OGRT__MESSAGE_TYPE)
-} OGRT__MessageType;
+typedef enum _Msg__MessageType {
+  MSG__MESSAGE_TYPE__UnknownMsg = 0,
+  MSG__MESSAGE_TYPE__ProcessStartMsg = 12,
+  MSG__MESSAGE_TYPE__ProcessEndMsg = 16
+    PROTOBUF_C__FORCE_ENUM_TO_BE_INT_SIZE(MSG__MESSAGE_TYPE)
+} Msg__MessageType;
 
 /* --- messages --- */
 
-struct  _OGRT__JobStart
-{
-  ProtobufCMessage base;
-  char *job_id;
-  int64_t start_time;
-};
-#define OGRT__JOB_START__INIT \
- { PROTOBUF_C_MESSAGE_INIT (&ogrt__job_start__descriptor) \
-    , (char *)protobuf_c_empty_string, 0 }
-
-
-struct  _OGRT__JobEnd
-{
-  ProtobufCMessage base;
-  char *job_id;
-  int64_t end_time;
-};
-#define OGRT__JOB_END__INIT \
- { PROTOBUF_C_MESSAGE_INIT (&ogrt__job_end__descriptor) \
-    , (char *)protobuf_c_empty_string, 0 }
-
-
-struct  _OGRT__SharedObject
+struct  _Msg__SharedObject
 {
   ProtobufCMessage base;
   char *path;
   char *signature;
 };
-#define OGRT__SHARED_OBJECT__INIT \
- { PROTOBUF_C_MESSAGE_INIT (&ogrt__shared_object__descriptor) \
+#define MSG__SHARED_OBJECT__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&msg__shared_object__descriptor) \
     , (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string }
 
 
-struct  _OGRT__Module
+struct  _Msg__Module
 {
   ProtobufCMessage base;
   char *name;
 };
-#define OGRT__MODULE__INIT \
- { PROTOBUF_C_MESSAGE_INIT (&ogrt__module__descriptor) \
+#define MSG__MODULE__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&msg__module__descriptor) \
     , (char *)protobuf_c_empty_string }
 
 
 /*
  * sent at start of process 
  */
-struct  _OGRT__ProcessInfo
+struct  _Msg__ProcessStart
 {
   ProtobufCMessage base;
   ProtobufCBinaryData uuid;
@@ -104,19 +75,19 @@ struct  _OGRT__ProcessInfo
   size_t n_arguments;
   char **arguments;
   size_t n_shared_objects;
-  OGRT__SharedObject **shared_objects;
+  Msg__SharedObject **shared_objects;
   size_t n_loaded_modules;
-  OGRT__Module **loaded_modules;
+  Msg__Module **loaded_modules;
 };
-#define OGRT__PROCESS_INFO__INIT \
- { PROTOBUF_C_MESSAGE_INIT (&ogrt__process_info__descriptor) \
+#define MSG__PROCESS_START__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&msg__process_start__descriptor) \
     , {0,NULL}, (char *)protobuf_c_empty_string, 0, 0, 0, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0,NULL, 0,NULL, 0,NULL, 0,NULL }
 
 
 /*
  * sent at end of process 
  */
-struct  _OGRT__ProcessResourceInfo
+struct  _Msg__ProcessEnd
 {
   ProtobufCMessage base;
   ProtobufCBinaryData uuid;
@@ -161,178 +132,100 @@ struct  _OGRT__ProcessResourceInfo
    */
   int64_t ru_nivcsw;
 };
-#define OGRT__PROCESS_RESOURCE_INFO__INIT \
- { PROTOBUF_C_MESSAGE_INIT (&ogrt__process_resource_info__descriptor) \
+#define MSG__PROCESS_END__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&msg__process_end__descriptor) \
     , {0,NULL}, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
 
 
-struct  _OGRT__JobInfo
-{
-  ProtobufCMessage base;
-  char *job_id;
-  size_t n_processes;
-  OGRT__ProcessInfo **processes;
-};
-#define OGRT__JOB_INFO__INIT \
- { PROTOBUF_C_MESSAGE_INIT (&ogrt__job_info__descriptor) \
-    , (char *)protobuf_c_empty_string, 0,NULL }
-
-
-/* OGRT__JobStart methods */
-void   ogrt__job_start__init
-                     (OGRT__JobStart         *message);
-size_t ogrt__job_start__get_packed_size
-                     (const OGRT__JobStart   *message);
-size_t ogrt__job_start__pack
-                     (const OGRT__JobStart   *message,
+/* Msg__SharedObject methods */
+void   msg__shared_object__init
+                     (Msg__SharedObject         *message);
+size_t msg__shared_object__get_packed_size
+                     (const Msg__SharedObject   *message);
+size_t msg__shared_object__pack
+                     (const Msg__SharedObject   *message,
                       uint8_t             *out);
-size_t ogrt__job_start__pack_to_buffer
-                     (const OGRT__JobStart   *message,
+size_t msg__shared_object__pack_to_buffer
+                     (const Msg__SharedObject   *message,
                       ProtobufCBuffer     *buffer);
-OGRT__JobStart *
-       ogrt__job_start__unpack
+Msg__SharedObject *
+       msg__shared_object__unpack
                      (ProtobufCAllocator  *allocator,
                       size_t               len,
                       const uint8_t       *data);
-void   ogrt__job_start__free_unpacked
-                     (OGRT__JobStart *message,
+void   msg__shared_object__free_unpacked
+                     (Msg__SharedObject *message,
                       ProtobufCAllocator *allocator);
-/* OGRT__JobEnd methods */
-void   ogrt__job_end__init
-                     (OGRT__JobEnd         *message);
-size_t ogrt__job_end__get_packed_size
-                     (const OGRT__JobEnd   *message);
-size_t ogrt__job_end__pack
-                     (const OGRT__JobEnd   *message,
+/* Msg__Module methods */
+void   msg__module__init
+                     (Msg__Module         *message);
+size_t msg__module__get_packed_size
+                     (const Msg__Module   *message);
+size_t msg__module__pack
+                     (const Msg__Module   *message,
                       uint8_t             *out);
-size_t ogrt__job_end__pack_to_buffer
-                     (const OGRT__JobEnd   *message,
+size_t msg__module__pack_to_buffer
+                     (const Msg__Module   *message,
                       ProtobufCBuffer     *buffer);
-OGRT__JobEnd *
-       ogrt__job_end__unpack
+Msg__Module *
+       msg__module__unpack
                      (ProtobufCAllocator  *allocator,
                       size_t               len,
                       const uint8_t       *data);
-void   ogrt__job_end__free_unpacked
-                     (OGRT__JobEnd *message,
+void   msg__module__free_unpacked
+                     (Msg__Module *message,
                       ProtobufCAllocator *allocator);
-/* OGRT__SharedObject methods */
-void   ogrt__shared_object__init
-                     (OGRT__SharedObject         *message);
-size_t ogrt__shared_object__get_packed_size
-                     (const OGRT__SharedObject   *message);
-size_t ogrt__shared_object__pack
-                     (const OGRT__SharedObject   *message,
+/* Msg__ProcessStart methods */
+void   msg__process_start__init
+                     (Msg__ProcessStart         *message);
+size_t msg__process_start__get_packed_size
+                     (const Msg__ProcessStart   *message);
+size_t msg__process_start__pack
+                     (const Msg__ProcessStart   *message,
                       uint8_t             *out);
-size_t ogrt__shared_object__pack_to_buffer
-                     (const OGRT__SharedObject   *message,
+size_t msg__process_start__pack_to_buffer
+                     (const Msg__ProcessStart   *message,
                       ProtobufCBuffer     *buffer);
-OGRT__SharedObject *
-       ogrt__shared_object__unpack
+Msg__ProcessStart *
+       msg__process_start__unpack
                      (ProtobufCAllocator  *allocator,
                       size_t               len,
                       const uint8_t       *data);
-void   ogrt__shared_object__free_unpacked
-                     (OGRT__SharedObject *message,
+void   msg__process_start__free_unpacked
+                     (Msg__ProcessStart *message,
                       ProtobufCAllocator *allocator);
-/* OGRT__Module methods */
-void   ogrt__module__init
-                     (OGRT__Module         *message);
-size_t ogrt__module__get_packed_size
-                     (const OGRT__Module   *message);
-size_t ogrt__module__pack
-                     (const OGRT__Module   *message,
+/* Msg__ProcessEnd methods */
+void   msg__process_end__init
+                     (Msg__ProcessEnd         *message);
+size_t msg__process_end__get_packed_size
+                     (const Msg__ProcessEnd   *message);
+size_t msg__process_end__pack
+                     (const Msg__ProcessEnd   *message,
                       uint8_t             *out);
-size_t ogrt__module__pack_to_buffer
-                     (const OGRT__Module   *message,
+size_t msg__process_end__pack_to_buffer
+                     (const Msg__ProcessEnd   *message,
                       ProtobufCBuffer     *buffer);
-OGRT__Module *
-       ogrt__module__unpack
+Msg__ProcessEnd *
+       msg__process_end__unpack
                      (ProtobufCAllocator  *allocator,
                       size_t               len,
                       const uint8_t       *data);
-void   ogrt__module__free_unpacked
-                     (OGRT__Module *message,
-                      ProtobufCAllocator *allocator);
-/* OGRT__ProcessInfo methods */
-void   ogrt__process_info__init
-                     (OGRT__ProcessInfo         *message);
-size_t ogrt__process_info__get_packed_size
-                     (const OGRT__ProcessInfo   *message);
-size_t ogrt__process_info__pack
-                     (const OGRT__ProcessInfo   *message,
-                      uint8_t             *out);
-size_t ogrt__process_info__pack_to_buffer
-                     (const OGRT__ProcessInfo   *message,
-                      ProtobufCBuffer     *buffer);
-OGRT__ProcessInfo *
-       ogrt__process_info__unpack
-                     (ProtobufCAllocator  *allocator,
-                      size_t               len,
-                      const uint8_t       *data);
-void   ogrt__process_info__free_unpacked
-                     (OGRT__ProcessInfo *message,
-                      ProtobufCAllocator *allocator);
-/* OGRT__ProcessResourceInfo methods */
-void   ogrt__process_resource_info__init
-                     (OGRT__ProcessResourceInfo         *message);
-size_t ogrt__process_resource_info__get_packed_size
-                     (const OGRT__ProcessResourceInfo   *message);
-size_t ogrt__process_resource_info__pack
-                     (const OGRT__ProcessResourceInfo   *message,
-                      uint8_t             *out);
-size_t ogrt__process_resource_info__pack_to_buffer
-                     (const OGRT__ProcessResourceInfo   *message,
-                      ProtobufCBuffer     *buffer);
-OGRT__ProcessResourceInfo *
-       ogrt__process_resource_info__unpack
-                     (ProtobufCAllocator  *allocator,
-                      size_t               len,
-                      const uint8_t       *data);
-void   ogrt__process_resource_info__free_unpacked
-                     (OGRT__ProcessResourceInfo *message,
-                      ProtobufCAllocator *allocator);
-/* OGRT__JobInfo methods */
-void   ogrt__job_info__init
-                     (OGRT__JobInfo         *message);
-size_t ogrt__job_info__get_packed_size
-                     (const OGRT__JobInfo   *message);
-size_t ogrt__job_info__pack
-                     (const OGRT__JobInfo   *message,
-                      uint8_t             *out);
-size_t ogrt__job_info__pack_to_buffer
-                     (const OGRT__JobInfo   *message,
-                      ProtobufCBuffer     *buffer);
-OGRT__JobInfo *
-       ogrt__job_info__unpack
-                     (ProtobufCAllocator  *allocator,
-                      size_t               len,
-                      const uint8_t       *data);
-void   ogrt__job_info__free_unpacked
-                     (OGRT__JobInfo *message,
+void   msg__process_end__free_unpacked
+                     (Msg__ProcessEnd *message,
                       ProtobufCAllocator *allocator);
 /* --- per-message closures --- */
 
-typedef void (*OGRT__JobStart_Closure)
-                 (const OGRT__JobStart *message,
+typedef void (*Msg__SharedObject_Closure)
+                 (const Msg__SharedObject *message,
                   void *closure_data);
-typedef void (*OGRT__JobEnd_Closure)
-                 (const OGRT__JobEnd *message,
+typedef void (*Msg__Module_Closure)
+                 (const Msg__Module *message,
                   void *closure_data);
-typedef void (*OGRT__SharedObject_Closure)
-                 (const OGRT__SharedObject *message,
+typedef void (*Msg__ProcessStart_Closure)
+                 (const Msg__ProcessStart *message,
                   void *closure_data);
-typedef void (*OGRT__Module_Closure)
-                 (const OGRT__Module *message,
-                  void *closure_data);
-typedef void (*OGRT__ProcessInfo_Closure)
-                 (const OGRT__ProcessInfo *message,
-                  void *closure_data);
-typedef void (*OGRT__ProcessResourceInfo_Closure)
-                 (const OGRT__ProcessResourceInfo *message,
-                  void *closure_data);
-typedef void (*OGRT__JobInfo_Closure)
-                 (const OGRT__JobInfo *message,
+typedef void (*Msg__ProcessEnd_Closure)
+                 (const Msg__ProcessEnd *message,
                   void *closure_data);
 
 /* --- services --- */
@@ -340,14 +233,11 @@ typedef void (*OGRT__JobInfo_Closure)
 
 /* --- descriptors --- */
 
-extern const ProtobufCEnumDescriptor    ogrt__message_type__descriptor;
-extern const ProtobufCMessageDescriptor ogrt__job_start__descriptor;
-extern const ProtobufCMessageDescriptor ogrt__job_end__descriptor;
-extern const ProtobufCMessageDescriptor ogrt__shared_object__descriptor;
-extern const ProtobufCMessageDescriptor ogrt__module__descriptor;
-extern const ProtobufCMessageDescriptor ogrt__process_info__descriptor;
-extern const ProtobufCMessageDescriptor ogrt__process_resource_info__descriptor;
-extern const ProtobufCMessageDescriptor ogrt__job_info__descriptor;
+extern const ProtobufCEnumDescriptor    msg__message_type__descriptor;
+extern const ProtobufCMessageDescriptor msg__shared_object__descriptor;
+extern const ProtobufCMessageDescriptor msg__module__descriptor;
+extern const ProtobufCMessageDescriptor msg__process_start__descriptor;
+extern const ProtobufCMessageDescriptor msg__process_end__descriptor;
 
 PROTOBUF_C__END_DECLS
 
