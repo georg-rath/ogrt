@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/georg-rath/ogrt/pkg/inspect"
+	"github.com/georg-rath/ogrt/pkg/signature"
 	"github.com/georg-rath/ogrt/server"
 
 	"github.com/BurntSushi/toml"
@@ -49,6 +50,19 @@ func main() {
 						return nil
 					}
 					ExecInspect(c.Args().First())
+					return nil
+				},
+			},
+			{
+				Name:    "generate",
+				Aliases: []string{"i"},
+				Usage:   "generate an object file containing a signature",
+				Action: func(c *cli.Context) error {
+					if c.Args().Len() < 1 {
+						fmt.Println("please specify an output file.")
+						return nil
+					}
+					signature.GenerateRandomSignatureObject(c.Args().First())
 					return nil
 				},
 			},
