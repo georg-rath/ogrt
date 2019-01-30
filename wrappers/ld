@@ -35,7 +35,7 @@ if [[ $(command -v ogrt) ]]; then
   sigfile=$(mktemp)
   if [[ $? == 0 ]]; then
     # generate signature file
-    ogrt --generate-signature > $sigfile
+    ogrt generate $sigfile
     [[ $? == 0 ]] && arguments+=( $sigfile ) && is_debug && echo "OGRT: appended signature $sigfile to argument list"
   fi
 fi

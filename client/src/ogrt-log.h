@@ -18,7 +18,7 @@
 
 #define Log(level, ...) do {  \
                               if (level <= ogrt_log_level) { \
-                                                                fprintf(ogrt_log_file,"%s: ", CMDLINE_PARSER_PACKAGE); \
+                                                                fprintf(ogrt_log_file,"ogrt: "); \
 				      				if(__uuid_str != NULL) { fprintf(ogrt_log_file, "%s: ", __uuid_str); } \
                                                                 fprintf(ogrt_log_file, __VA_ARGS__); \
                                                                 fflush(ogrt_log_file); \

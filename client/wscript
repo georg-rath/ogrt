@@ -82,16 +82,12 @@ def configure(conf):
         conf.define('OGRT_FILTER_REGEXPS_LIST', filter_regexps, quote=False)
         conf.define('OGRT_FILTER_REGEXPS_LIST_LENGTH', filter_regexps_length)
 
-
+    conf.define('OGRT_VERSION', git_version())
     conf.write_config_header('config.h')
 
 def build(bld):
-    lib_sources = [ "src/ogrt-cmdline.c", "src/ogrt-main.c", "src/ogrt.pb-c.c", "src/ogrt-readso.c", "src/ogrt-util.c" ]
-    bin_sources = [ "src/ogrt-cli.c", "src/ogrt-cmdline.c", "src/ogrt-signature.c" ]
+    lib_sources = [ "src/ogrt-main.c", "src/ogrt.pb-c.c", "src/ogrt-readso.c", "src/ogrt-util.c" ]
 
-    bld(features='subst', source='src/ogrt-cmdline.h.in', target='ogrt-cmdline.h',  VERSION = git_version() )
-
-    bld.program(includes='.', source=bin_sources, target='ogrt', stlib=['protobuf-c', 'uuid', 'elf'])
     bld.shlib(includes='.', source=lib_sources, use=['rt','dl'], target='ogrt', stlib=['protobuf-c', 'uuid'])
     bld.stlib(includes='.', source=lib_sources, use=['rt','dl'], target='ogrt', stlib=['protobuf-c', 'uuid'])
 
@@ -115,7 +111,3 @@ def dist(dst):
     finally:
         if version_file:
             version_file.close()
-
-# gengetopt --output-dir src --set-version '@VERSION@' --input src/ogrt-cmdline.ggo --include-getopt -F ogrt-cmdline
-
-

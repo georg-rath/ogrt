@@ -55,7 +55,7 @@ func main() {
 			},
 			{
 				Name:    "generate",
-				Aliases: []string{"i"},
+				Aliases: []string{"g"},
 				Usage:   "generate an object file containing a signature",
 				Action: func(c *cli.Context) error {
 					if c.Args().Len() < 1 {

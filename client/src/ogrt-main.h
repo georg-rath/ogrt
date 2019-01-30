@@ -26,7 +26,6 @@
 #include "ogrt-readso.h"
 #include "ogrt-log.h"
 #include "ogrt-util.h"
-#include "ogrt-cmdline.h"
 #include "ogrt-signature.h"
 #include "config.h"
 
