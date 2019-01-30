@@ -1,9 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
+	"github.com/georg-rath/ogrt/pkg/inspect"
 	"github.com/georg-rath/ogrt/server"
 
 	"github.com/BurntSushi/toml"
@@ -34,6 +36,19 @@ func main() {
 				},
 				Action: func(c *cli.Context) error {
 					ExecServer()
+					return nil
+				},
+			},
+			{
+				Name:    "inspect",
+				Aliases: []string{"i"},
+				Usage:   "inspect a binary signed by ogrt",
+				Action: func(c *cli.Context) error {
+					if c.Args().Len() < 1 {
+						fmt.Println("please specify a binary to inspect.")
+						return nil
+					}
+					ExecInspect(c.Args().First())
 					return nil
 				},
 			},
@@ -87,4 +102,17 @@ func ExecServer() {
 	server.Start()
 
 	select {}
+}
+
+func ExecInspect(file string) {
+	f, err := os.Open(file)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer f.Close()
+	sigs, err := inspect.FindSignatures(f)
+	for _, sig := range sigs {
+		fmt.Println(sig)
+	}
 }

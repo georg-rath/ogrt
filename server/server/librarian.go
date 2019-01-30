@@ -122,15 +122,6 @@ func (l *Librarian) GetJob(c *gin.Context) {
 }
 
 func (l *Librarian) addResourcesToProcessInfos(procInfos []*ProcessInfo) {
-	client, err := elastic.NewClient()
-	if err != nil {
-		// Handle error
-		panic(err)
-	}
-	defer client.Stop()
-
-	ctx := context.Background()
-
 	// batch queries
 	var start, step, end int
 	step = l.elasticResourceBatchSize
@@ -155,11 +146,11 @@ func (l *Librarian) addResourcesToProcessInfos(procInfos []*ProcessInfo) {
 		//}
 		//fmt.Println(string(data))
 
-		searchResult, err := client.Search().
+		searchResult, err := l.elastic.Search().
 			Index("test-end-*"). // search in index "test-end"
 			Query(query).        // specify the query
 			From(0).Size(l.elasticResourceBatchSize).
-			Do(ctx)
+			Do(context.Background())
 		if err != nil {
 			e, _ := err.(*elastic.Error)
 			l.Printf("Elastic failed with status %d and error %s.", e.Status, e.Details)

@@ -39,7 +39,7 @@ int ogrt_preload_init_hook()
     ogrt_log_level = OGRT_LOG_NOTHING;
   }
 
-  if(ogrt_env_enabled("OGRT_DBG")) {
+  if(ogrt_env_enabled("OGRT_DEBUG") || ogrt_env_enabled("OGRT_DBG")) {
     ogrt_log_level = OGRT_LOG_DBG;
   }
 
@@ -398,13 +398,13 @@ bool ogrt_send_processinfo() {
 
     __uuid_str = malloc(37);
     uuid_unparse_lower(__uuid, __uuid_str);
-   
-    //TODO: remove - this is for debugging 
+
+    //TODO: remove - this is for debugging
     //char path[1024];
     //snprintf(path, 1024, "/tmp/%s/%s", job_id, __uuid_str);
     //FILE *fp = fopen(path , "w");
     //fclose(fp);
-		     
+
     size_t msg_len = msg__process_start__get_packed_size(&msg);
     void *msg_serialized = NULL;
     char *msg_buffer = NULL;
