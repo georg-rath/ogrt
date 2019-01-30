@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log"
+	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -13,7 +14,8 @@ import (
 	"github.com/georg-rath/ogrt/protocol"
 
 	"github.com/golang/protobuf/jsonpb"
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
+	"github.com/rcrowley/go-metrics"
 )
 
 /**
@@ -44,14 +46,14 @@ var jobCache *JobDataCache
 var tupleCache *TupleCache
 
 var db *sql.DB
-var loadJobDataSql string = `SELECT "ID", "JobID", "User", "FirstCommand", "LastCommand", "MaxRSS", "MaxRSSCmdline", "RuUtime", "RuStime", "RuMinflt", "RuMajflt", "RuInblock", "RuOublock", "RuNvcsw", "RuNivcsw", "Modules", "SharedObjects" FROM "Jobs" WHERE "JobID" = $1`
+var loadJobDataSql string = `SELECT "ID", "JobID", "User", "FirstCommand", "LastCommand", "MaxRSS", "MaxRSSCmdline", "RuUtime", "RuStime", "RuMinflt", "RuMajflt", "RuInblock", "RuOublock", "RuNvcsw", "RuNivcsw", "Modules", "SharedObjects", "Hosts" FROM "Jobs" WHERE "JobID" = $1`
 var loadJobDataStmt *sql.Stmt
 
 var insertJobDataSql string = `
 	INSERT INTO "Jobs"
-		("ID", "JobID", "User", "FirstCommand", "LastCommand", "MaxRSS", "MaxRSSCmdline", "RuUtime", "RuStime", "RuMinflt", "RuMajflt", "RuInblock", "RuOublock", "RuNvcsw", "RuNivcsw", "SharedObjects", "Modules")
+		("ID", "JobID", "User", "FirstCommand", "LastCommand", "MaxRSS", "MaxRSSCmdline", "RuUtime", "RuStime", "RuMinflt", "RuMajflt", "RuInblock", "RuOublock", "RuNvcsw", "RuNivcsw", "SharedObjects", "Modules", "Hosts")
 		VALUES
-		(DEFAULT, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+		(DEFAULT, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
   RETURNING "ID";`
 var updateJobDataSql string = `
 	UPDATE "Jobs"
@@ -71,7 +73,8 @@ var updateJobDataSql string = `
 		"RuNvcsw"      = $14,
 		"RuNivcsw"     = $15,
 		"SharedObjects"= $16,
-		"Modules"      = $17
+		"Modules"      = $17,
+		"Hosts"        = $18
 	WHERE "ID" = $1;`
 var updateJobDataStmt *sql.Stmt
 var insertJobDataStmt *sql.Stmt
@@ -80,6 +83,7 @@ type JobData struct {
 	RowId         int64
 	JobId         string
 	User          string
+	Hosts         []string
 	FirstCommand  time.Time
 	LastCommand   time.Time
 	MaxRSS        int64
@@ -100,6 +104,7 @@ type JobData struct {
 }
 
 func LoadJobData(pi *msg.ProcessStart) (jd *JobData) {
+	log.Println("load job data for", pi.JobId)
 	rows, err := loadJobDataStmt.Query(pi.JobId)
 	if err != nil {
 		log.Fatal("failed loading job data")
@@ -113,7 +118,7 @@ func LoadJobData(pi *msg.ProcessStart) (jd *JobData) {
 			dirty: false,
 			mu:    &sync.Mutex{},
 		}
-		if err := rows.Scan(&rjd.RowId, &rjd.JobId, &rjd.User, &rjd.FirstCommand, &rjd.LastCommand, &rjd.MaxRSS, &rjd.MaxRSSCmdline, &rjd.RuUtime, &rjd.RuStime, &rjd.RuMinflt, &rjd.RuMajflt, &rjd.RuInblock, &rjd.RuOublock, &rjd.RuNvcsw, &rjd.RuNivcsw, &modules, &sharedObjects); err != nil {
+		if err := rows.Scan(&rjd.RowId, &rjd.JobId, &rjd.User, &rjd.FirstCommand, &rjd.LastCommand, &rjd.MaxRSS, &rjd.MaxRSSCmdline, &rjd.RuUtime, &rjd.RuStime, &rjd.RuMinflt, &rjd.RuMajflt, &rjd.RuInblock, &rjd.RuOublock, &rjd.RuNvcsw, &rjd.RuNivcsw, &modules, &sharedObjects, pq.Array(&rjd.Hosts)); err != nil {
 			log.Fatal(err)
 		}
 		if jd == nil {
@@ -121,7 +126,7 @@ func LoadJobData(pi *msg.ProcessStart) (jd *JobData) {
 			continue
 		}
 		// get the one closest to the current one
-		if convertTime(pi.Time).Sub(rjd.FirstCommand) < convertTime(pi.Time).Sub(jd.FirstCommand) {
+		if convertFromMsToTime(pi.Time).Sub(rjd.FirstCommand) < convertFromMsToTime(pi.Time).Sub(jd.FirstCommand) {
 			jd = rjd
 		}
 	}
@@ -130,6 +135,7 @@ func LoadJobData(pi *msg.ProcessStart) (jd *JobData) {
 		jd = &JobData{
 			JobId:         pi.JobId,
 			User:          pi.Username,
+			Hosts:         []string{pi.Hostname},
 			Modules:       pi.LoadedModules,
 			SharedObjects: pi.SharedObjects,
 			dirty:         true,
@@ -178,10 +184,6 @@ func LoadJobData(pi *msg.ProcessStart) (jd *JobData) {
 	return
 }
 
-func convertTime(raw int64) time.Time {
-	return time.Unix(0, raw*int64(time.Millisecond))
-}
-
 func (jd *JobData) AddTuple(pt *ProcessTuple) {
 	jd.mu.Lock()
 	defer jd.mu.Unlock()
@@ -196,14 +198,27 @@ func (jd *JobData) AddTuple(pt *ProcessTuple) {
 	jd.RuInblock += pt.ProcessEnd.RuInblock
 	jd.RuOublock += pt.ProcessEnd.RuOublock
 	jd.RuNvcsw += pt.ProcessEnd.RuNvcsw
-	jd.RuNivcsw = jd.RuNivcsw + pt.ProcessEnd.RuNivcsw
+	jd.RuNivcsw += pt.ProcessEnd.RuNivcsw
+
+	// merge hosts
+	addHost := true
+	for _, host := range jd.Hosts {
+		if host == pt.ProcessStart.Hostname {
+			addHost = false
+			break
+		}
+	}
+	if addHost {
+		jd.Hosts = append(jd.Hosts, pt.ProcessStart.Hostname)
+		sort.Strings(jd.Hosts)
+	}
 
 	if pt.ProcessEnd.RuMaxrss > jd.MaxRSS {
 		jd.MaxRSS = pt.ProcessEnd.RuMaxrss
 		jd.MaxRSSCmdline = pt.ProcessStart.Cmdline
 	}
 
-	t := convertTime(pt.ProcessStart.Time)
+	t := convertFromMsToTime(pt.ProcessStart.Time)
 	if jd.FirstCommand.IsZero() || t.Before(jd.FirstCommand) {
 		jd.FirstCommand = t
 	}
@@ -270,15 +285,15 @@ func (jd *JobData) Save() {
 	moduleBuilder.WriteString("]")
 
 	if jd.RowId == 0 {
-		if err := insertJobDataStmt.QueryRow(jd.JobId, jd.User, jd.FirstCommand, jd.LastCommand, jd.MaxRSS, jd.MaxRSSCmdline, jd.RuUtime, jd.RuStime, jd.RuMinflt, jd.RuMajflt, jd.RuInblock, jd.RuOublock, jd.RuNvcsw, jd.RuNivcsw, soBuilder.String(), moduleBuilder.String()).Scan(&jd.RowId); err != nil {
+		if err := insertJobDataStmt.QueryRow(jd.JobId, jd.User, jd.FirstCommand, jd.LastCommand, jd.MaxRSS, jd.MaxRSSCmdline, jd.RuUtime, jd.RuStime, jd.RuMinflt, jd.RuMajflt, jd.RuInblock, jd.RuOublock, jd.RuNvcsw, jd.RuNivcsw, soBuilder.String(), moduleBuilder.String(), pq.Array(jd.Hosts)).Scan(&jd.RowId); err != nil {
 			log.Println("failed inserting job data", err)
 			return
 		}
 		jd.dirty = false
 		return
 	}
-	if _, err := updateJobDataStmt.Exec(jd.RowId, jd.JobId, jd.User, jd.FirstCommand, jd.LastCommand, jd.MaxRSS, jd.MaxRSSCmdline, jd.RuUtime, jd.RuStime, jd.RuMinflt, jd.RuMajflt, jd.RuInblock, jd.RuOublock, jd.RuNvcsw, jd.RuNivcsw, soBuilder.String(), moduleBuilder.String()); err != nil {
-		log.Println("failed inserting job data", err)
+	if _, err := updateJobDataStmt.Exec(jd.RowId, jd.JobId, jd.User, jd.FirstCommand, jd.LastCommand, jd.MaxRSS, jd.MaxRSSCmdline, jd.RuUtime, jd.RuStime, jd.RuMinflt, jd.RuMajflt, jd.RuInblock, jd.RuOublock, jd.RuNvcsw, jd.RuNivcsw, soBuilder.String(), moduleBuilder.String(), pq.Array(jd.Hosts)); err != nil {
+		log.Println("failed updating job data", err)
 		return
 	}
 	jd.dirty = false
@@ -309,6 +324,24 @@ func (fw *PgSqlAggregatorOutput) Open(completionFn func(n int), config map[strin
 	user := config["User"].(string)
 	password := config["Password"].(string)
 	database := config["Database"].(string)
+	var flushInterval time.Duration
+	if flushIntervalRaw, ok := config["FlushInterval"].(int64); !ok {
+		flushInterval = 10 * time.Second
+	} else {
+		flushInterval = time.Duration(flushIntervalRaw) * time.Second
+	}
+	var purgeInterval time.Duration
+	if purgeIntervalRaw, ok := config["PurgeInterval"].(int64); !ok {
+		purgeInterval = 3 * time.Minute
+	} else {
+		purgeInterval = time.Duration(purgeIntervalRaw) * time.Second
+	}
+	var purgeAge time.Duration
+	if purgeAgeRaw, ok := config["PurgeAge"].(int64); !ok {
+		purgeAge = 3 * time.Minute
+	} else {
+		purgeAge = time.Duration(purgeAgeRaw) * time.Second
+	}
 
 	db, err := sql.Open("postgres", fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable", user, password, host, port, database))
 	if err != nil {
@@ -321,8 +354,9 @@ func (fw *PgSqlAggregatorOutput) Open(completionFn func(n int), config map[strin
 
 	createTable := `CREATE TABLE IF NOT EXISTS "Jobs" (
 		"ID" serial NOT NULL,
-		"JobID" text NOT NULL,
+		"JobID" text NULL,
 		"User" text NOT NULL,
+		"Hosts" text[] NOT NULL,
 		"FirstCommand" timestamp NOT NULL,
 		"LastCommand" timestamp NOT NULL,
 		"MaxRSS" bigint NOT NULL,
@@ -352,7 +386,7 @@ func (fw *PgSqlAggregatorOutput) Open(completionFn func(n int), config map[strin
 		log.Fatal("failed to prepare query", err)
 	}
 
-	jobCache = NewJobDataCache()
+	jobCache = NewJobDataCache(flushInterval, purgeInterval, purgeAge)
 	tupleCache = NewTupleCache()
 
 	fw.completionFn = completionFn
@@ -382,8 +416,14 @@ func (fw *PgSqlAggregatorOutput) EmitProcessEnd(pri *msg.ProcessEnd) {
 		LastUpdate: time.Now(),
 	}
 	if pt, loaded := tupleCache.LoadOrStore(uuid, pt); loaded {
-		// processinfo was already in cache
+		// ProcessStart was already in cache
 		pt.ProcessEnd = pri
+		if pt.ProcessStart == nil {
+			//TODO: this is an edge case
+			//TODO: in case of multiple end messages this loses valuable info
+			log.Println("No Start for UUID", uuid)
+			return
+		}
 		jobCache.GetOrLoad(pt.ProcessStart).AddTuple(pt)
 		tupleCache.Delete(uuid)
 	}
@@ -409,7 +449,7 @@ type JobDataCache struct {
 	stopped chan struct{}
 }
 
-func NewJobDataCache() (jdc *JobDataCache) {
+func NewJobDataCache(flushInterval, purgeInterval, purgeAge time.Duration) (jdc *JobDataCache) {
 	jdc = &JobDataCache{
 		cache: make(map[string]*JobData),
 		mu:    &sync.RWMutex{},
@@ -419,14 +459,14 @@ func NewJobDataCache() (jdc *JobDataCache) {
 	}
 
 	go func() {
-		flushTicker := time.NewTicker(5 * time.Second)
+		flushTicker := time.NewTicker(flushInterval)
 		defer flushTicker.Stop()
-		purgeTicker := time.NewTicker(10 * time.Second)
+		purgeTicker := time.NewTicker(purgeInterval)
 		defer purgeTicker.Stop()
 
 		flushFn := func() {
-			log.Printf("%d elements in tupleCache\n", tupleCache.Size())
-			log.Printf("%d elements in jobCache\n", jobCache.Size())
+			// log.Printf("%d elements in tupleCache\n", tupleCache.Size())
+			// log.Printf("%d elements in jobCache\n", jobCache.Size())
 			jdc.mu.RLock()
 			flushed := 0
 			for _, v := range jdc.cache {
@@ -441,7 +481,7 @@ func NewJobDataCache() (jdc *JobDataCache) {
 		for {
 			select {
 			case <-jdc.stop:
-				log.Println("flushing aggregator cache...")
+				// log.Println("flushing aggregator cache...")
 				flushFn()
 				jdc.stopped <- struct{}{}
 				break
@@ -454,7 +494,7 @@ func NewJobDataCache() (jdc *JobDataCache) {
 				for _, v := range jdc.cache {
 					if !v.Dirty() {
 						age := now.Sub(v.LastCommand)
-						if age > 10*time.Second {
+						if age > purgeAge {
 							delete(jdc.cache, v.JobId)
 							purged++
 						}
@@ -470,7 +510,6 @@ func NewJobDataCache() (jdc *JobDataCache) {
 }
 
 func (jdc *JobDataCache) GetOrLoad(pi *msg.ProcessStart) (jd *JobData) {
-	log.Println("get")
 	jdc.mu.RLock()
 	value, found := jdc.cache[pi.JobId]
 	// we did not find the entry, lets fetch it from the db
@@ -511,9 +550,15 @@ type TupleCache struct {
 }
 
 func NewTupleCache() (tc *TupleCache) {
-	return &TupleCache{
+	tc = &TupleCache{
 		cache: &sync.Map{},
 	}
+
+	metrics.NewRegisteredFunctionalGauge("tuplecache_size", metrics.DefaultRegistry, func() int64 {
+		return int64(tc.Size())
+	})
+
+	return
 }
 
 func (tc *TupleCache) LoadOrStore(key string, value *ProcessTuple) (actual *ProcessTuple, loaded bool) {

@@ -44,4 +44,5 @@ bool ogrt_send_processinfo();
 bool ogrt_send_resourceinfo();
 int ogrt_preload_init_hook();
 void signal_wrapper(int signum);
+bool is_wrapped_signal(int signal);
 #endif

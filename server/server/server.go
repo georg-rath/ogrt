@@ -2,21 +2,19 @@ package server
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"log"
 	"net"
-	"net/http"
 	"os"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/georg-rath/ogrt/output"
 	"github.com/georg-rath/ogrt/protocol"
 	"github.com/golang/protobuf/proto"
 	"github.com/rcrowley/go-metrics"
-	"github.com/rcrowley/go-metrics/exp"
 	"github.com/vrischmann/go-metrics-influxdb"
 )
 
@@ -26,9 +24,10 @@ type Server struct {
 	Address          string
 	Port             int
 	MaxReceiveBuffer int
-	DebugEndpoint    bool
 	PrintMetrics     uint32
 	WebAPIAddress    string
+
+	Librarian *Librarian
 
 	InfluxMetrics InfluxMetrics
 
@@ -95,16 +94,13 @@ func (s *Server) AddOutput(name string, config map[string]interface{}) {
 	s.outputs[name].Open(output.DefaultCompletionFn, config)
 }
 
-func (s *Server) Start() {
-	/* expose metrics as HTTP endpoint */
-	if s.DebugEndpoint == true {
-		exp.Exp(metrics.DefaultRegistry)
-		go http.ListenAndServe(":8080", nil)
-		s.Printf("Instantiated DebugEndpoint at Port 8080 (http://0.0.0.0:8080/debug/metrics)")
-	}
+func (s *Server) EnableLibrarian(config map[string]interface{}) {
+	s.Librarian = NewLibrarian(config)
+}
 
+func (s *Server) Start() {
 	if s.WebAPIAddress != "" {
-		go StartWebAPI(s.WebAPIAddress)
+		go StartWebAPI(s.WebAPIAddress, s.Librarian)
 	}
 
 	// Listen for incoming connections.
@@ -140,7 +136,7 @@ func (s *Server) Start() {
 	}
 
 	go func() {
-		bufferPool := NewStaticPool(s.MaxReceiveBuffer)
+		bufferPool := NewStaticPool("pool_receive", s.MaxReceiveBuffer)
 
 		// Read the data waiting on the connection and put it in the data buffer
 		for {
@@ -178,9 +174,13 @@ func (s *Server) Start() {
 							return
 						}
 
-						for _, output := range s.outputs {
-							s.outstandingOutput.Add(1)
-							output.EmitProcessStart(ps)
+						s.Printf("ProcessStart: JobId=%s, Pid=%d, UUID=%s\n", ps.JobId, ps.Pid, hex.EncodeToString(ps.Uuid))
+						for name, output := range s.outputs {
+							metric := metrics.Get("output_" + name).(metrics.Timer)
+							metric.Time(func() {
+								s.outstandingOutput.Add(1)
+								output.EmitProcessStart(ps)
+							})
 						}
 					case uint32(msg.MessageType_ProcessEndMsg):
 						pe := &msg.ProcessEnd{}
@@ -192,9 +192,14 @@ func (s *Server) Start() {
 							return
 						}
 
-						for _, output := range s.outputs {
-							s.outstandingOutput.Add(1)
-							output.EmitProcessEnd(pe)
+						s.Printf("ProcessEnd: UUID=%s\n", hex.EncodeToString(pe.Uuid))
+
+						for name, output := range s.outputs {
+							metric := metrics.Get("output_" + name).(metrics.Timer)
+							metric.Time(func() {
+								s.outstandingOutput.Add(1)
+								output.EmitProcessEnd(pe)
+							})
 						}
 					default:
 						s.Println("unkown message type", msgType)
@@ -207,37 +212,4 @@ func (s *Server) Start() {
 
 		s.Println(bufferPool.InFlight(), "packet buffers still in use")
 	}()
-}
-
-type StaticPool struct {
-	pool     sync.Pool
-	size     int
-	inFlight int64
-}
-
-func (s StaticPool) Get() []byte {
-	atomic.AddInt64(&s.inFlight, 1)
-	return s.pool.Get().([]byte)
-}
-
-func (s StaticPool) Put(buf []byte) {
-	if cap(buf) != s.size {
-		panic("buffer with wrong size returned to pool")
-	}
-	atomic.AddInt64(&s.inFlight, -1)
-	s.pool.Put(buf)
-}
-
-func (s StaticPool) InFlight() int64 {
-	inFlight := atomic.LoadInt64(&s.inFlight)
-	return inFlight
-}
-
-func NewStaticPool(size int) *StaticPool {
-	return &StaticPool{
-		pool: sync.Pool{
-			New: func() interface{} { return make([]byte, size) },
-		},
-		size: size,
-	}
 }

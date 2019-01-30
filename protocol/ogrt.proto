@@ -46,6 +46,7 @@ message ProcessStart {
 message ProcessEnd {
   bytes uuid = 99;
   int64 time = 104;
+  int64 startTime = 114; /* for easier elasticsearch lookups */
 
   /* resource info from getrusage() */
   int64 ru_utime = 105;    /* user CPU time used */
@@ -58,3 +59,34 @@ message ProcessEnd {
   int64 ru_nvcsw = 112;    /* voluntary context switches */
   int64 ru_nivcsw = 113;   /* involuntary context switches */
 }
+
+// merged process data struct for replying through the query API
+//message ProcessInfo {
+//  bytes uuid       = 500;
+//  string binpath   = 501;
+//  int32 pid        = 502;
+//  int32 parent_pid = 503;
+//  int64 start_time = 504;
+//  int64 end_time   = 505;
+//  string signature = 506;
+//  string job_id    = 507;
+//  string username  = 508;
+//  string hostname  = 509;
+//  string cmdline   = 510;
+//  string cwd       = 511;
+//  repeated string environment_variables = 512;
+//  repeated string arguments             = 513;
+//  repeated SharedObject shared_objects  = 514;
+//  repeated Module loaded_modules        = 515;
+//
+//  /* resource info from getrusage() */
+//  int64 ru_utime   = 516;    /* user CPU time used */
+//  int64 ru_stime   = 517;    /* system CPU time used */
+//  int64 ru_maxrss  = 518;   /* maximum resident set size */
+//  int64 ru_minflt  = 519;   /* page reclaims (soft page faults) */
+//  int64 ru_majflt  = 520;   /* page faults (hard page faults) */
+//  int64 ru_inblock = 521;  /* block input operations */
+//  int64 ru_oublock = 522;  /* block output operations */
+//  int64 ru_nvcsw   = 523;    /* voluntary context switches */
+//  int64 ru_nivcsw  = 524;   /* involuntary context switches */
+//}

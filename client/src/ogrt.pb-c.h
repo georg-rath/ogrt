@@ -19,6 +19,7 @@ typedef struct _Msg__SharedObject Msg__SharedObject;
 typedef struct _Msg__Module Msg__Module;
 typedef struct _Msg__ProcessStart Msg__ProcessStart;
 typedef struct _Msg__ProcessEnd Msg__ProcessEnd;
+typedef struct _Msg__ProcessInfo Msg__ProcessInfo;
 
 
 /* --- enums --- */
@@ -93,6 +94,10 @@ struct  _Msg__ProcessEnd
   ProtobufCBinaryData uuid;
   int64_t time;
   /*
+   * for easier elasticsearch lookups 
+   */
+  int64_t starttime;
+  /*
    * resource info from getrusage() 
    */
   /*
@@ -134,7 +139,78 @@ struct  _Msg__ProcessEnd
 };
 #define MSG__PROCESS_END__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&msg__process_end__descriptor) \
-    , {0,NULL}, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
+    , {0,NULL}, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
+
+
+/*
+ * merged process data struct for replying through the query API
+ */
+struct  _Msg__ProcessInfo
+{
+  ProtobufCMessage base;
+  ProtobufCBinaryData uuid;
+  char *binpath;
+  int32_t pid;
+  int32_t parent_pid;
+  int64_t start_time;
+  int64_t end_time;
+  char *signature;
+  char *job_id;
+  char *username;
+  char *hostname;
+  char *cmdline;
+  char *cwd;
+  size_t n_environment_variables;
+  char **environment_variables;
+  size_t n_arguments;
+  char **arguments;
+  size_t n_shared_objects;
+  Msg__SharedObject **shared_objects;
+  size_t n_loaded_modules;
+  Msg__Module **loaded_modules;
+  /*
+   * resource info from getrusage() 
+   */
+  /*
+   * user CPU time used 
+   */
+  int64_t ru_utime;
+  /*
+   * system CPU time used 
+   */
+  int64_t ru_stime;
+  /*
+   * maximum resident set size 
+   */
+  int64_t ru_maxrss;
+  /*
+   * page reclaims (soft page faults) 
+   */
+  int64_t ru_minflt;
+  /*
+   * page faults (hard page faults) 
+   */
+  int64_t ru_majflt;
+  /*
+   * block input operations 
+   */
+  int64_t ru_inblock;
+  /*
+   * block output operations 
+   */
+  int64_t ru_oublock;
+  /*
+   * voluntary context switches 
+   */
+  int64_t ru_nvcsw;
+  /*
+   * involuntary context switches 
+   */
+  int64_t ru_nivcsw;
+};
+#define MSG__PROCESS_INFO__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&msg__process_info__descriptor) \
+    , {0,NULL}, (char *)protobuf_c_empty_string, 0, 0, 0, 0, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, (char *)protobuf_c_empty_string, 0,NULL, 0,NULL, 0,NULL, 0,NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
 
 
 /* Msg__SharedObject methods */
@@ -213,6 +289,25 @@ Msg__ProcessEnd *
 void   msg__process_end__free_unpacked
                      (Msg__ProcessEnd *message,
                       ProtobufCAllocator *allocator);
+/* Msg__ProcessInfo methods */
+void   msg__process_info__init
+                     (Msg__ProcessInfo         *message);
+size_t msg__process_info__get_packed_size
+                     (const Msg__ProcessInfo   *message);
+size_t msg__process_info__pack
+                     (const Msg__ProcessInfo   *message,
+                      uint8_t             *out);
+size_t msg__process_info__pack_to_buffer
+                     (const Msg__ProcessInfo   *message,
+                      ProtobufCBuffer     *buffer);
+Msg__ProcessInfo *
+       msg__process_info__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data);
+void   msg__process_info__free_unpacked
+                     (Msg__ProcessInfo *message,
+                      ProtobufCAllocator *allocator);
 /* --- per-message closures --- */
 
 typedef void (*Msg__SharedObject_Closure)
@@ -227,6 +322,9 @@ typedef void (*Msg__ProcessStart_Closure)
 typedef void (*Msg__ProcessEnd_Closure)
                  (const Msg__ProcessEnd *message,
                   void *closure_data);
+typedef void (*Msg__ProcessInfo_Closure)
+                 (const Msg__ProcessInfo *message,
+                  void *closure_data);
 
 /* --- services --- */
 
@@ -238,6 +336,7 @@ extern const ProtobufCMessageDescriptor msg__shared_object__descriptor;
 extern const ProtobufCMessageDescriptor msg__module__descriptor;
 extern const ProtobufCMessageDescriptor msg__process_start__descriptor;
 extern const ProtobufCMessageDescriptor msg__process_end__descriptor;
+extern const ProtobufCMessageDescriptor msg__process_info__descriptor;
 
 PROTOBUF_C__END_DECLS
 

@@ -187,6 +187,51 @@ void   msg__process_end__free_unpacked
   assert(message->base.descriptor == &msg__process_end__descriptor);
   protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
 }
+void   msg__process_info__init
+                     (Msg__ProcessInfo         *message)
+{
+  static const Msg__ProcessInfo init_value = MSG__PROCESS_INFO__INIT;
+  *message = init_value;
+}
+size_t msg__process_info__get_packed_size
+                     (const Msg__ProcessInfo *message)
+{
+  assert(message->base.descriptor == &msg__process_info__descriptor);
+  return protobuf_c_message_get_packed_size ((const ProtobufCMessage*)(message));
+}
+size_t msg__process_info__pack
+                     (const Msg__ProcessInfo *message,
+                      uint8_t       *out)
+{
+  assert(message->base.descriptor == &msg__process_info__descriptor);
+  return protobuf_c_message_pack ((const ProtobufCMessage*)message, out);
+}
+size_t msg__process_info__pack_to_buffer
+                     (const Msg__ProcessInfo *message,
+                      ProtobufCBuffer *buffer)
+{
+  assert(message->base.descriptor == &msg__process_info__descriptor);
+  return protobuf_c_message_pack_to_buffer ((const ProtobufCMessage*)message, buffer);
+}
+Msg__ProcessInfo *
+       msg__process_info__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data)
+{
+  return (Msg__ProcessInfo *)
+     protobuf_c_message_unpack (&msg__process_info__descriptor,
+                                allocator, len, data);
+}
+void   msg__process_info__free_unpacked
+                     (Msg__ProcessInfo *message,
+                      ProtobufCAllocator *allocator)
+{
+  if(!message)
+    return;
+  assert(message->base.descriptor == &msg__process_info__descriptor);
+  protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
+}
 static const ProtobufCFieldDescriptor msg__shared_object__field_descriptors[2] =
 {
   {
@@ -496,7 +541,7 @@ const ProtobufCMessageDescriptor msg__process_start__descriptor =
   (ProtobufCMessageInit) msg__process_start__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
-static const ProtobufCFieldDescriptor msg__process_end__field_descriptors[11] =
+static const ProtobufCFieldDescriptor msg__process_end__field_descriptors[12] =
 {
   {
     "uuid",
@@ -630,6 +675,18 @@ static const ProtobufCFieldDescriptor msg__process_end__field_descriptors[11] =
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
+  {
+    "startTime",
+    114,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_INT64,
+    0,   /* quantifier_offset */
+    offsetof(Msg__ProcessEnd, starttime),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
 };
 static const unsigned msg__process_end__field_indices_by_name[] = {
   7,   /* field[7] = ru_inblock */
@@ -641,6 +698,7 @@ static const unsigned msg__process_end__field_indices_by_name[] = {
   8,   /* field[8] = ru_oublock */
   3,   /* field[3] = ru_stime */
   2,   /* field[2] = ru_utime */
+  11,   /* field[11] = startTime */
   1,   /* field[1] = time */
   0,   /* field[0] = uuid */
 };
@@ -648,7 +706,7 @@ static const ProtobufCIntRange msg__process_end__number_ranges[2 + 1] =
 {
   { 99, 0 },
   { 104, 1 },
-  { 0, 11 }
+  { 0, 12 }
 };
 const ProtobufCMessageDescriptor msg__process_end__descriptor =
 {
@@ -658,11 +716,361 @@ const ProtobufCMessageDescriptor msg__process_end__descriptor =
   "Msg__ProcessEnd",
   "msg",
   sizeof(Msg__ProcessEnd),
-  11,
+  12,
   msg__process_end__field_descriptors,
   msg__process_end__field_indices_by_name,
   2,  msg__process_end__number_ranges,
   (ProtobufCMessageInit) msg__process_end__init,
+  NULL,NULL,NULL    /* reserved[123] */
+};
+static const ProtobufCFieldDescriptor msg__process_info__field_descriptors[25] =
+{
+  {
+    "uuid",
+    500,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_BYTES,
+    0,   /* quantifier_offset */
+    offsetof(Msg__ProcessInfo, uuid),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "binpath",
+    501,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_STRING,
+    0,   /* quantifier_offset */
+    offsetof(Msg__ProcessInfo, binpath),
+    NULL,
+    &protobuf_c_empty_string,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "pid",
+    502,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_INT32,
+    0,   /* quantifier_offset */
+    offsetof(Msg__ProcessInfo, pid),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "parent_pid",
+    503,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_INT32,
+    0,   /* quantifier_offset */
+    offsetof(Msg__ProcessInfo, parent_pid),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "start_time",
+    504,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_INT64,
+    0,   /* quantifier_offset */
+    offsetof(Msg__ProcessInfo, start_time),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "end_time",
+    505,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_INT64,
+    0,   /* quantifier_offset */
+    offsetof(Msg__ProcessInfo, end_time),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "signature",
+    506,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_STRING,
+    0,   /* quantifier_offset */
+    offsetof(Msg__ProcessInfo, signature),
+    NULL,
+    &protobuf_c_empty_string,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "job_id",
+    507,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_STRING,
+    0,   /* quantifier_offset */
+    offsetof(Msg__ProcessInfo, job_id),
+    NULL,
+    &protobuf_c_empty_string,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "username",
+    508,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_STRING,
+    0,   /* quantifier_offset */
+    offsetof(Msg__ProcessInfo, username),
+    NULL,
+    &protobuf_c_empty_string,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "hostname",
+    509,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_STRING,
+    0,   /* quantifier_offset */
+    offsetof(Msg__ProcessInfo, hostname),
+    NULL,
+    &protobuf_c_empty_string,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "cmdline",
+    510,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_STRING,
+    0,   /* quantifier_offset */
+    offsetof(Msg__ProcessInfo, cmdline),
+    NULL,
+    &protobuf_c_empty_string,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "cwd",
+    511,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_STRING,
+    0,   /* quantifier_offset */
+    offsetof(Msg__ProcessInfo, cwd),
+    NULL,
+    &protobuf_c_empty_string,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "environment_variables",
+    512,
+    PROTOBUF_C_LABEL_REPEATED,
+    PROTOBUF_C_TYPE_STRING,
+    offsetof(Msg__ProcessInfo, n_environment_variables),
+    offsetof(Msg__ProcessInfo, environment_variables),
+    NULL,
+    &protobuf_c_empty_string,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "arguments",
+    513,
+    PROTOBUF_C_LABEL_REPEATED,
+    PROTOBUF_C_TYPE_STRING,
+    offsetof(Msg__ProcessInfo, n_arguments),
+    offsetof(Msg__ProcessInfo, arguments),
+    NULL,
+    &protobuf_c_empty_string,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "shared_objects",
+    514,
+    PROTOBUF_C_LABEL_REPEATED,
+    PROTOBUF_C_TYPE_MESSAGE,
+    offsetof(Msg__ProcessInfo, n_shared_objects),
+    offsetof(Msg__ProcessInfo, shared_objects),
+    &msg__shared_object__descriptor,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "loaded_modules",
+    515,
+    PROTOBUF_C_LABEL_REPEATED,
+    PROTOBUF_C_TYPE_MESSAGE,
+    offsetof(Msg__ProcessInfo, n_loaded_modules),
+    offsetof(Msg__ProcessInfo, loaded_modules),
+    &msg__module__descriptor,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "ru_utime",
+    516,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_INT64,
+    0,   /* quantifier_offset */
+    offsetof(Msg__ProcessInfo, ru_utime),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "ru_stime",
+    517,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_INT64,
+    0,   /* quantifier_offset */
+    offsetof(Msg__ProcessInfo, ru_stime),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "ru_maxrss",
+    518,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_INT64,
+    0,   /* quantifier_offset */
+    offsetof(Msg__ProcessInfo, ru_maxrss),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "ru_minflt",
+    519,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_INT64,
+    0,   /* quantifier_offset */
+    offsetof(Msg__ProcessInfo, ru_minflt),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "ru_majflt",
+    520,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_INT64,
+    0,   /* quantifier_offset */
+    offsetof(Msg__ProcessInfo, ru_majflt),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "ru_inblock",
+    521,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_INT64,
+    0,   /* quantifier_offset */
+    offsetof(Msg__ProcessInfo, ru_inblock),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "ru_oublock",
+    522,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_INT64,
+    0,   /* quantifier_offset */
+    offsetof(Msg__ProcessInfo, ru_oublock),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "ru_nvcsw",
+    523,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_INT64,
+    0,   /* quantifier_offset */
+    offsetof(Msg__ProcessInfo, ru_nvcsw),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "ru_nivcsw",
+    524,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_INT64,
+    0,   /* quantifier_offset */
+    offsetof(Msg__ProcessInfo, ru_nivcsw),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+};
+static const unsigned msg__process_info__field_indices_by_name[] = {
+  13,   /* field[13] = arguments */
+  1,   /* field[1] = binpath */
+  10,   /* field[10] = cmdline */
+  11,   /* field[11] = cwd */
+  5,   /* field[5] = end_time */
+  12,   /* field[12] = environment_variables */
+  9,   /* field[9] = hostname */
+  7,   /* field[7] = job_id */
+  15,   /* field[15] = loaded_modules */
+  3,   /* field[3] = parent_pid */
+  2,   /* field[2] = pid */
+  21,   /* field[21] = ru_inblock */
+  20,   /* field[20] = ru_majflt */
+  18,   /* field[18] = ru_maxrss */
+  19,   /* field[19] = ru_minflt */
+  24,   /* field[24] = ru_nivcsw */
+  23,   /* field[23] = ru_nvcsw */
+  22,   /* field[22] = ru_oublock */
+  17,   /* field[17] = ru_stime */
+  16,   /* field[16] = ru_utime */
+  14,   /* field[14] = shared_objects */
+  6,   /* field[6] = signature */
+  4,   /* field[4] = start_time */
+  8,   /* field[8] = username */
+  0,   /* field[0] = uuid */
+};
+static const ProtobufCIntRange msg__process_info__number_ranges[1 + 1] =
+{
+  { 500, 0 },
+  { 0, 25 }
+};
+const ProtobufCMessageDescriptor msg__process_info__descriptor =
+{
+  PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
+  "msg.ProcessInfo",
+  "ProcessInfo",
+  "Msg__ProcessInfo",
+  "msg",
+  sizeof(Msg__ProcessInfo),
+  25,
+  msg__process_info__field_descriptors,
+  msg__process_info__field_indices_by_name,
+  1,  msg__process_info__number_ranges,
+  (ProtobufCMessageInit) msg__process_info__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
 static const ProtobufCEnumValue msg__message_type__enum_values_by_number[3] =

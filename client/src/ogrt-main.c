@@ -5,12 +5,18 @@ static bool  __ogrt_active   =  0;
 static int   __daemon_socket = -1;
 static pid_t __pid           =  0;
 static pid_t __parent_pid    =  0;
+static int64_t startTime     =  0;
 static char  __hostname[HOST_NAME_MAX+1];
 static uuid_t __uuid = {0};
+static int wrapped_signals[] = {
+      SIGHUP, SIGINT, SIGQUIT, SIGILL, SIGABRT, SIGFPE, SIGSEGV, SIGPIPE, SIGALRM, SIGTERM,
+      SIGUSR1, SIGUSR2, SIGBUS, SIGPOLL, SIGPROF, SIGSYS, SIGTRAP, SIGVTALRM, SIGXCPU, SIGXFSZ,
+      -1
+    };
 static void (*saved_signal_handlers[32]) (int) = { NULL };
-
 FILE *ogrt_log_file;
 int ogrt_log_level;
+char *__uuid_str = NULL;
 
 /** real functions without hooks */
 static int (*real_sigaction)(int, const struct sigaction *, struct sigaction *) = NULL;
@@ -153,14 +159,9 @@ int ogrt_preload_init_hook()
 
 
     // wrap signal handlers
-    int wrap_signals[] = {
-      SIGHUP, SIGINT, SIGQUIT, SIGILL, SIGABRT, SIGFPE, SIGSEGV, SIGPIPE, SIGALRM, SIGTERM,
-      SIGUSR1, SIGUSR2, SIGBUS, SIGPOLL, SIGPROF, SIGSYS, SIGTRAP, SIGVTALRM, SIGXCPU, SIGXFSZ,
-      -1
-    };
-    for(int i=0; wrap_signals[i] != -1; i++) {
+    for(int i=0; wrapped_signals[i] != -1; i++) {
       struct sigaction old;
-      int current_signal = wrap_signals[i];
+      int current_signal = wrapped_signals[i];
 
       if((*real_sigaction)(current_signal, NULL, &old) == -1) {
         Log(OGRT_LOG_ERR, "got no signal handler");
@@ -219,6 +220,7 @@ bool ogrt_send_resourceinfo() {
   struct timespec ts;
   clock_gettime(CLOCK_REALTIME, &ts);
   msg.time = (ts.tv_sec * (uint64_t)1000) + (ts.tv_nsec / 1000000);
+  msg.starttime = startTime;
 
   msg.uuid.data = __uuid;
   msg.uuid.len = 16;
@@ -344,7 +346,7 @@ bool ogrt_send_processinfo() {
 #endif
     msg.pid = __pid;
     msg.parent_pid = __parent_pid;
-    msg.time = (ts.tv_sec * (uint64_t)1000) + (ts.tv_nsec / 1000000);
+    msg.time = startTime = (ts.tv_sec * (uint64_t)1000) + (ts.tv_nsec / 1000000);
     char *job_id = getenv(OGRT_ENV_JOBID);
     msg.job_id = job_id == NULL ? "UNKNOWN" : job_id;
 #if OGRT_MSG_SEND_USERNAME == 1
@@ -394,6 +396,15 @@ bool ogrt_send_processinfo() {
     msg.uuid.data = __uuid;
     msg.uuid.len= 16;
 
+    __uuid_str = malloc(37);
+    uuid_unparse_lower(__uuid, __uuid_str);
+   
+    //TODO: remove - this is for debugging 
+    //char path[1024];
+    //snprintf(path, 1024, "/tmp/%s/%s", job_id, __uuid_str);
+    //FILE *fp = fopen(path , "w");
+    //fclose(fp);
+		     
     size_t msg_len = msg__process_start__get_packed_size(&msg);
     void *msg_serialized = NULL;
     char *msg_buffer = NULL;
@@ -478,7 +489,7 @@ void signal_wrapper(int signum) {
     }
     Log(OGRT_LOG_DBG, "in wrapper for signal %d\n", signum);
 
-    if(__ogrt_active == 1) {
+    if(__ogrt_active == 1 && is_wrapped_signal(signum)) {
       if(!ogrt_send_resourceinfo()) {
         Log(OGRT_LOG_ERR, "failed to send resource info\n");
         return;
@@ -494,9 +505,17 @@ void signal_wrapper(int signum) {
     exit(128+signum);
 }
 
+OGRT_INTERNAL
+bool is_wrapped_signal(int signal) {
+  for(int i=0; wrapped_signals[i] != -1; i++) {
+    if(wrapped_signals[i] == signal) { return true; }
+  }
+  return false;
+}
+
 /** Hook Functions **/
 int sigaction(int signum, const struct sigaction *act, struct sigaction *oldact) {
-  Log(OGRT_LOG_DBG, "hooked sigaction for signal %d\n", signum);
+  Log(OGRT_LOG_DBG, "hooked sigaction() for signal %d\n", signum);
   if(!__ogrt_active) {
     return real_sigaction(signum, (const struct sigaction *)act, oldact);
   }
@@ -506,26 +525,27 @@ int sigaction(int signum, const struct sigaction *act, struct sigaction *oldact)
       Log(OGRT_LOG_DBG, "ignoring signal %d\n", signum);
       return real_sigaction(signum, act, oldact);
     }
-    Log(OGRT_LOG_DBG, "%d: wrapping function %p\n", signum, act->sa_handler);
+    Log(OGRT_LOG_DBG, "sigaction() - signal %d: wrapping function %p\n", signum, act->sa_handler);
     saved_signal_handlers[signum] = act->sa_handler;
     ((struct sigaction *)act)->sa_handler = signal_wrapper;
   }
   return real_sigaction(signum, (const struct sigaction *)act, oldact);
 }
 
-sighandler_t signal (int signum, sighandler_t action) {
+sighandler_t signal(int signum, sighandler_t action) {
   Log(OGRT_LOG_DBG, "hooked signal() for signal %d\n", signum);
   if(!__ogrt_active) {
     return real_signal(signum, action);
   }
 
   if(action == SIG_IGN) {
-    Log(OGRT_LOG_DBG, "ignoring signal %d\n", signum);
+    Log(OGRT_LOG_DBG, "signal(): ignoring signal %d\n", signum);
     return real_signal(signum, action);
   }
 
-  Log(OGRT_LOG_DBG, "%d: wrapping function %p\n", action);
+  Log(OGRT_LOG_DBG, "signal() - signal %d, wrapping function %p\n", signum, action);
   saved_signal_handlers[signum] = action;
   action = signal_wrapper;
   return real_signal(signum, action);
 }
+

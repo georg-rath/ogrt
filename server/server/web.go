@@ -9,11 +9,12 @@ import (
 	"github.com/rcrowley/go-metrics"
 )
 
-func StartWebAPI(address string) {
+func StartWebAPI(address string, librarian *Librarian) {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	pprof.Register(r)
 	r.Use(gin.Recovery())
+	r.Use(corsMiddleware())
 	r.GET("/metrics", func(c *gin.Context) {
 		outputs := outputMetrics(metrics.DefaultRegistry, time.Millisecond)
 		inputs := inputMetrics(metrics.DefaultRegistry, time.Millisecond)
@@ -23,7 +24,33 @@ func StartWebAPI(address string) {
 		})
 	})
 	r.Static("/web", "./web")
+
+	librarian.Start(r)
 	r.Run(address)
+}
+
+func corsMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Max-Age", "86400")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, UPDATE")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, Cache-Control, X-Auth-Key")
+		c.Writer.Header().Set("Access-Control-Expose-Headers", "Content-Length")
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(200)
+		} else {
+			c.Next()
+		}
+	}
+}
+
+func abortWithError(c *gin.Context, statusCode int, message string) {
+	c.JSON(statusCode, gin.H{
+		"error": message,
+	})
+	c.Abort()
 }
 
 func inputMetrics(r metrics.Registry, scale time.Duration) map[string]map[string]float64 {
@@ -92,4 +119,11 @@ func outputMetrics(r metrics.Registry, scale time.Duration) map[string]map[strin
 		}
 	})
 	return results
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }

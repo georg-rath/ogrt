@@ -99,6 +99,9 @@ def build(bld):
     bld(features='c cprogram test', install_path=None, includes='.', source=lib_sources + [ "test/test_readso.c" ], lib=['rt','dl'], target='test_readso', stlib=['protobuf-c', 'uuid', 'elf'])
     bld(features='c cprogram test', install_path=None, includes='.', source=lib_sources + [ "test/test_processinfo.c" ], lib=['rt', 'dl'],  target='test_processinfo', stlib=['protobuf-c', 'uuid', 'elf'])
 
+#    bld(features='c cprogram', install_path=None, source=[ "test/signal-test.c" ], target='test_signal')
+#    bld(features='test_scripts', test_scripts_source='./test/test_signals', test_scripts_template='./${SCRIPT}')
+
     bld.options.all_tests = True
 
     from waflib.Tools import waf_unit_test

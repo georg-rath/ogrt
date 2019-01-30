@@ -6,6 +6,8 @@ github.com/gin-contrib/pprof
 github.com/gin-gonic/gin
 github.com/gin-gonic/gin/binding
 github.com/gin-gonic/gin/render
+# github.com/gofrs/uuid v3.2.0+incompatible
+github.com/gofrs/uuid
 # github.com/gogo/protobuf v1.2.0
 github.com/gogo/protobuf/gogoproto
 github.com/gogo/protobuf/proto
@@ -21,10 +23,19 @@ github.com/influxdata/influxdb/pkg/escape
 # github.com/lib/pq v0.0.0-20181016162627-9eb73efc1fcc
 github.com/lib/pq
 github.com/lib/pq/oid
+# github.com/mailru/easyjson v0.0.0-20180823135443-60711f1a8329
+github.com/mailru/easyjson
+github.com/mailru/easyjson/jlexer
+github.com/mailru/easyjson/jwriter
+github.com/mailru/easyjson/buffer
 # github.com/manucorporat/sse v0.0.0-20160126180136-ee05b128a739
 github.com/manucorporat/sse
 # github.com/mattn/go-isatty v0.0.2
 github.com/mattn/go-isatty
+# github.com/olivere/elastic v6.2.15+incompatible
+github.com/olivere/elastic
+github.com/olivere/elastic/config
+github.com/olivere/elastic/uritemplates
 # github.com/pkg/errors v0.0.0-20170505043639-c605e284fe17
 github.com/pkg/errors
 # github.com/rcrowley/go-metrics v0.0.0-20161128210544-1f30fe9094a5
@@ -34,18 +45,10 @@ github.com/rcrowley/go-metrics/exp
 github.com/vrischmann/go-metrics-influxdb
 # golang.org/x/net v0.0.0-20181106065722-10aee1819953
 golang.org/x/net/context
-golang.org/x/net/context/ctxhttp
 # golang.org/x/sys v0.0.0-20180830151530-49385e6e1522
 golang.org/x/sys/unix
 # gopkg.in/go-playground/validator.v8 v8.18.1
 gopkg.in/go-playground/validator.v8
-# gopkg.in/olivere/elastic.v3 v3.0.69
-gopkg.in/olivere/elastic.v3
-gopkg.in/olivere/elastic.v3/backoff
-gopkg.in/olivere/elastic.v3/uritemplates
-# gopkg.in/olivere/elastic.v5 v5.0.41
-gopkg.in/olivere/elastic.v5
-gopkg.in/olivere/elastic.v5/uritemplates
 # gopkg.in/urfave/cli.v2 v2.0.0-20180128182452-d3ae77c26ac8
 gopkg.in/urfave/cli.v2
 # gopkg.in/yaml.v2 v2.0.0-20170407172122-cd8b52f8269e

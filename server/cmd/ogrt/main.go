@@ -46,7 +46,6 @@ type ServerConf struct {
 	Address          string
 	Port             int
 	MaxReceiveBuffer int
-	DebugEndpoint    bool
 	PrintMetrics     uint32
 	WebAPIAddress    string
 }
@@ -58,16 +57,15 @@ func ExecServer() {
 		log.Fatal("error parsing configuration:", err)
 	}
 
-	s := server.New()
-	s.Address = gConf.Address
-	s.Port = gConf.Port
-	s.MaxReceiveBuffer = gConf.MaxReceiveBuffer
-	s.DebugEndpoint = gConf.DebugEndpoint
-	s.PrintMetrics = gConf.PrintMetrics
+	server := server.New()
+	server.Address = gConf.Address
+	server.Port = gConf.Port
+	server.MaxReceiveBuffer = gConf.MaxReceiveBuffer
+	server.PrintMetrics = gConf.PrintMetrics
 	if gConf.WebAPIAddress == "" {
 		gConf.WebAPIAddress = ":8080"
 	}
-	s.WebAPIAddress = gConf.WebAPIAddress
+	server.WebAPIAddress = gConf.WebAPIAddress
 
 	// load output config
 	var raw interface{}
@@ -77,11 +75,16 @@ func ExecServer() {
 	conf := raw.(map[string]interface{})
 	if outputs, found := conf["Outputs"]; found {
 		for name, config := range outputs.(map[string]interface{}) {
-			s.AddOutput(name, config.(map[string]interface{}))
+			server.AddOutput(name, config.(map[string]interface{}))
 		}
 	}
 
-	s.Start()
+	// instantiate librarian
+	if libConf, found := conf["Librarian"]; found {
+		server.EnableLibrarian(libConf.(map[string]interface{}))
+	}
+
+	server.Start()
 
 	select {}
 }
