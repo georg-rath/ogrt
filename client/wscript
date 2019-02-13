@@ -24,6 +24,7 @@ def options(opt):
     opt.load('compiler_c gnu_dirs waf_unit_test')
     config_group.add_option('--server-host', dest='server_host', default="localhost", action='store', type='string', help='the hostname of the OGRT server')
     config_group.add_option('--server-port', dest='server_port', default=7971, action='store', type='int', help='the port of the OGRT server')
+    config_group.add_option('--allow-server-env', dest='server_env_allowed', default='no', action='store', type='choice', choices=['yes', 'no'], help='allow overriding compiled-in server with env variable')
     config_group.add_option('--env-jobid', dest='env_jobid', default="JOBID", action='store', type='string', help='the default environment variable that contains the job id')
     config_group.add_option('--msg-send-username', dest='msg_username', default='yes', action='store', type='choice', choices=['yes', 'no'], help='send username to the server')
     config_group.add_option('--msg-send-hostname', dest='msg_hostname', default='yes', action='store', type='choice', choices=['yes', 'no'], help='send hostname to the server')
@@ -33,6 +34,7 @@ def options(opt):
     config_group.add_option('--msg-send-environment-whitelist', dest='msg_environment_whitelist', default='', action='store', type='string', help='limit environment variable sending to these variables (comma separated list)')
     config_group.add_option('--msg-send-loadedmodules', dest='msg_loadedmodules', default='yes', action='store', type='choice', choices=['yes', 'no'], help='send loaded modules at the time to the server')
     config_group.add_option('--filter-regexps', dest='filter_regexps', default='', action='store', type='string', help='do not monitor processes that match those POSIX regular expressions (comma separated list)')
+    config_group.add_option('--wrap-signals', dest='wrap_signals', default='no', action='store', type='choice', choices=['yes', 'no'], help='wrap signal handlers to send resource messages in case of SIGINT, etc')
 
 def configure(conf):
     conf.load('compiler_c gnu_dirs waf_unit_test')
@@ -63,6 +65,7 @@ def configure(conf):
     else:
         conf.define('OGRT_NET_PORT', str(conf.options.server_port))
 
+    conf.define('OGRT_ALLOW_SERVER_ENV', 1 if conf.options.server_env_allowed == 'yes' else 0)
     environment_whitelist = ', '.join("\"%s\"" % str(e) for e in set(conf.options.msg_environment_whitelist.split(',')) if e)
     environment_whitelist_length = len(environment_whitelist.split(',')) if environment_whitelist else 0
     conf.define('OGRT_ENV_JOBID', conf.options.env_jobid)
@@ -81,7 +84,7 @@ def configure(conf):
     if filter_regexps_length > 0:
         conf.define('OGRT_FILTER_REGEXPS_LIST', filter_regexps, quote=False)
         conf.define('OGRT_FILTER_REGEXPS_LIST_LENGTH', filter_regexps_length)
-
+    conf.define('OGRT_WRAP_SIGNALS', 1 if conf.options.wrap_signals == 'yes' else 0)
     conf.define('OGRT_VERSION', git_version())
     conf.write_config_header('config.h')
 

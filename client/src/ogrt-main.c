@@ -8,19 +8,24 @@ static pid_t __parent_pid    =  0;
 static int64_t startTime     =  0;
 static char  __hostname[HOST_NAME_MAX+1];
 static uuid_t __uuid = {0};
+
+#if OGRT_WRAP_SIGNALS == 1
 static int wrapped_signals[] = {
       SIGHUP, SIGINT, SIGQUIT, SIGILL, SIGABRT, SIGFPE, SIGSEGV, SIGPIPE, SIGALRM, SIGTERM,
       SIGUSR1, SIGUSR2, SIGBUS, SIGPOLL, SIGPROF, SIGSYS, SIGTRAP, SIGVTALRM, SIGXCPU, SIGXFSZ,
       -1
     };
 static void (*saved_signal_handlers[32]) (int) = { NULL };
-FILE *ogrt_log_file;
-int ogrt_log_level;
-char *__uuid_str = NULL;
 
 /** real functions without hooks */
 static int (*real_sigaction)(int, const struct sigaction *, struct sigaction *) = NULL;
 static sighandler_t (*real_signal)(int, sighandler_t) = NULL;
+#endif
+
+FILE *ogrt_log_file;
+int ogrt_log_level;
+char *__uuid_str = NULL;
+
 
 /**
  * Initialize preload library.
@@ -52,8 +57,8 @@ int ogrt_preload_init_hook()
               OGRT_NET_HOST,      OGRT_NET_PORT,      OGRT_ENV_JOBID,      OGRT_ELF_SECTION_NAME,      OGRT_ELF_NOTE_TYPE);
     printf("  OGRT_MSG_SEND_USERNAME=%d\n  OGRT_MSG_SEND_HOSTNAME=%d\n  OGRT_MSG_SEND_ENVIRONMENT=%d\n",
               OGRT_MSG_SEND_USERNAME,      OGRT_MSG_SEND_HOSTNAME,      OGRT_MSG_SEND_ENVIRONMENT);
-    printf("  OGRT_MSG_SEND_CMDLINE=%d\n  OGRT_MSG_SEND_LOADEDMODULES=%d\n",
-              OGRT_MSG_SEND_CMDLINE,      OGRT_MSG_SEND_LOADEDMODULES);
+    printf("  OGRT_MSG_SEND_CMDLINE=%d\n  OGRT_MSG_SEND_LOADEDMODULES=%d OGRT_ALLOW_SERVER_ENV=%d\n",
+              OGRT_MSG_SEND_CMDLINE,      OGRT_MSG_SEND_LOADEDMODULES,   OGRT_ALLOW_SERVER_ENV);
 #if OGRT_FILTER_REGEXPS == 1
     printf("  OGRT_FILTER_REGEXP_LIST:\n");
     char *regexp_list[] = { OGRT_FILTER_REGEXPS_LIST };
@@ -74,6 +79,7 @@ int ogrt_preload_init_hook()
     __ogrt_active = true;
   }
 
+#if OGRT_WRAP_SIGNALS == 1
   // hook signal functions to be able to wrap with our handler
   // this is done for the case where ogrt is inactive too - it will still hook signals
   real_sigaction = dlsym(RTLD_NEXT, "sigaction");
@@ -90,6 +96,7 @@ int ogrt_preload_init_hook()
     __ogrt_active = 0;
     return 1;
   }
+#endif
 
   if(__ogrt_active && __daemon_socket < 0) {
     /* cache PID of current process - we are reusing that quite often */
@@ -119,20 +126,37 @@ int ogrt_preload_init_hook()
     }
 #endif
 
-    /* establish a connection the the ogrt server */
+    /* establish a socket to the ogrt server */
     struct addrinfo hints, *servinfo, *p;
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_DGRAM;
 
     int ret;
-    if ((ret = getaddrinfo(OGRT_NET_HOST, OGRT_NET_PORT, &hints, &servinfo)) != 0) {
+    char *host = OGRT_NET_HOST;
+    char *port = OGRT_NET_PORT;
+#if OGRT_ALLOW_SERVER_ENV == 1
+    char *host_port = getenv("OGRT_SERVER");
+    if (host_port != NULL) {
+      char *token;
+      token = strsep(&host_port, ":");
+      if (token != NULL) {
+        host = token;
+      }
+      token = strsep(&host_port, ":");
+      if (token != NULL) {
+        port = token;
+      }
+    }
+#endif
+    Log(OGRT_LOG_DBG, "using server: %s:%s\n", host, port);
+    if ((ret = getaddrinfo(host, port, &hints, &servinfo)) != 0) {
       Log(OGRT_LOG_ERR, "getaddrinfo: %s\n", gai_strerror(ret));
       __ogrt_active = false;
       return 1;
     }
 
-    for(p = servinfo; p != NULL; p = p->ai_next) {
+    for (p = servinfo; p != NULL; p = p->ai_next) {
         if ((__daemon_socket = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
             Log(OGRT_LOG_ERR, "%s\n", strerror(errno));
             __ogrt_active = false;
@@ -157,7 +181,7 @@ int ogrt_preload_init_hook()
 
     freeaddrinfo(servinfo);
 
-
+#if OGRT_WRAP_SIGNALS == 1
     // wrap signal handlers
     for(int i=0; wrapped_signals[i] != -1; i++) {
       struct sigaction old;
@@ -179,6 +203,7 @@ int ogrt_preload_init_hook()
         return 1;
       }
     }
+#endif
 
     Log(OGRT_LOG_INFO, "I be watchin' yo! (process %d [%s] with parent %d)\n", __pid, ogrt_get_binpath(__pid), getppid());
 
@@ -364,13 +389,13 @@ bool ogrt_send_processinfo() {
     char *environment[OGRT_MSG_SEND_ENVIRONMENT_WHITELIST_LENGTH+1];
     char *whitelist[] = { OGRT_MSG_SEND_ENVIRONMENT_WHITELIST };
 
-    for(int i=0; i < OGRT_MSG_SEND_ENVIRONMENT_WHITELIST_LENGTH; i++) {
+    for (int i=0; i < OGRT_MSG_SEND_ENVIRONMENT_WHITELIST_LENGTH; i++) {
       Log(OGRT_LOG_DBG, "[D] checking env variable: %s\n", whitelist[i]);
       char *env = getenv(whitelist[i]);
-      if(env != NULL) {
+      if (env != NULL) {
         Log(OGRT_LOG_DBG, "[D] storing : %s with value '%s'\n", whitelist[i], env);
         int ret = asprintf(&(environment[envvar_count++]), "%s=%s", whitelist[i], env);
-        if(ret == -1) {
+        if (ret == -1) {
           Log(OGRT_LOG_ERR, "failed copying environment variable\n");
         }
       }
@@ -480,6 +505,7 @@ int ogrt_prepare_sendbuffer(const int message_type, const int payload_length, ch
 }
 
 
+#if OGRT_WRAP_SIGNALS == 1
 /** wrap signals to send resource messages after program termination via signal */
 OGRT_INTERNAL
 void signal_wrapper(int signum) {
@@ -548,4 +574,4 @@ sighandler_t signal(int signum, sighandler_t action) {
   action = signal_wrapper;
   return real_signal(signum, action);
 }
-
+#endif
