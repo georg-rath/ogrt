@@ -1,0 +1,13 @@
+[Unit]
+Description=OGRT Server - a tool designed to track user processes on a HPC cluster
+Wants=elasticsearch.service
+After=elasticsearch.service
+
+[Service]
+Type=simple
+WorkingDirectory=${INSTALL_PATH}/ogrt
+ExecStart=${INSTALL_PATH}/ogrt/ogrt-server
+ExecReload=/bin/kill -HUP \$MAINPID
+KillMode=process
+Restart=on-failure
+RestartSec=30s
