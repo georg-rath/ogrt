@@ -1,0 +1,46 @@
+{
+    "mappings": {
+      "process": {
+        "properties": {
+          "binpath": {
+            "type": "text",
+            "fielddata": true
+          },
+          "signature": {
+            "type": "keyword"
+          },
+          "job_id": {
+            "type": "keyword"
+          },
+          "username": {
+            "type": "keyword"
+          },
+          "hostname": {
+            "type": "keyword"
+          },
+          "parent_pid": {
+            "type": "long"
+          },
+          "pid": {
+            "type": "long"
+          },
+          "shared_objects": {
+            "type": "nested",
+            "properties": {
+              "path": {
+                "type": "text",
+                "fielddata": true
+              },
+              "signature": {
+                "type": "keyword"
+              }
+            }
+          },
+          "time": {
+            "type": "date",
+            "format": "epoch_millis"
+          }
+        }
+      }
+  }
+}
