@@ -24,7 +24,7 @@ function download() {
 
 function download_dependencies() {
   echo "Downloading..."
-  download "libelf.tar.gz" "http://www.mr511.de/software/libelf-0.8.13.tar.gz"
+  download "libelf.tar.gz" "https://fossies.org/linux/misc/old/libelf-0.8.13.tar.gz"
   download "protobuf.tar.gz" "https://github.com/google/protobuf/releases/download/v2.6.1/protobuf-2.6.1.tar.gz"
   download "protobuf-c.tar.gz" "https://github.com/protobuf-c/protobuf-c/releases/download/v1.2.1/protobuf-c-1.2.1.tar.gz"
   download "util-linux.tar.xz" "https://www.kernel.org/pub/linux/utils/util-linux/v2.27/util-linux-2.27.1.tar.xz"
